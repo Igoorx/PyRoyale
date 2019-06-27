@@ -39,6 +39,9 @@ class Match(object):
 
         self.broadPlayerList()
 
+        if player.voted:
+            self.votes -= 1
+
         if not self.playing and self.votes >= len(self.players) * 0.60:
             self.start()
             
