@@ -90,7 +90,11 @@ class Match(object):
         return playersData
 
     def onPlayerReady(self, player):
-        if not self.playing and self.autoStartTimer is None: # Ensure that the game starts even with fewer players
+        if not self.playing: # Ensure that the game starts even with fewer players
+            try:
+                self.autoStartTimer.cancel()
+            except:
+                pass
             self.autoStartTimer = reactor.callLater(60, self.start, True)
             
         if self.world == "lobby" or not player.lobbier:
