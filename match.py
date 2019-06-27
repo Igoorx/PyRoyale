@@ -39,7 +39,7 @@ class Match(object):
 
         self.broadPlayerList()
 
-        if not self.playing and self.votes >= len(self.players) * 0.85:
+        if not self.playing and self.votes >= len(self.players) * 0.60:
             self.start()
             
     def getWinners(self):
@@ -61,6 +61,8 @@ class Match(object):
 
     def broadLoadWorld(self):
         for player in self.players:
+            player.dead = True
+            player.loaded = False
             player.loadWorld(self.world)
 
     def broadStartTimer(self, time):
@@ -111,11 +113,11 @@ class Match(object):
 
     def voteStart(self):
         self.votes += 1
-        if not self.playing and self.votes >= len(self.players) * 0.85:
+        if not self.playing and self.votes >= len(self.players) * 0.60:
             self.start()
 
     def start(self, forced = False):
-        if self.playing or (not forced and len(self.players) < 10): # We need at-least 10 players to start
+        if self.playing or (not forced and len(self.players) < 15): # We need at-least 15 players to start
             return
         self.playing = True
         try:
