@@ -115,7 +115,7 @@ class Match(object):
             self.start()
 
     def start(self, forced = False):
-        if self.playing or (not forced and len(self.players) < 10): # We need at-least 10 players to start
+        if self.playing or (not forced and len(self.players) < 30): # We need at-least 30 players to start
             return
         self.playing = True
         try:
