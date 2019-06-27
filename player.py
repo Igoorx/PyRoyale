@@ -45,6 +45,7 @@ class Player(object):
     def onEnterIngame(self):
         if self.match.world == "lobby":
             self.lobbier = True
+            
         self.dead = True
         self.loaded = False
         self.loadWorld(self.match.world)
@@ -56,6 +57,8 @@ class Player(object):
         self.posY = 3
         self.dead = False
         self.loaded = True
+        
         self.sendBin(0x02, Buffer().writeInt16(self.id)) # ASSIGN_PID
+
         self.match.onPlayerReady(self)
         

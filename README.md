@@ -7,7 +7,7 @@ I really liked the idea of this game and, as I already imagined that it would fa
 
 You can discuss about the game and this emulator in [our discord](https://discord.gg/63SBFj).
 
-## Depencencies
+## Dependencies
 This project uses python <b>2.7</b> and the following modules.
 - Twisted
 - AutoBahn

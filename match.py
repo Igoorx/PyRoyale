@@ -15,6 +15,8 @@ class Match(object):
         self.players = list()
         self.winners = int()
 
+        self.autoStartTimer = None
+
     def getNextPlayerId(self):
         self.lastId += 1
         return self.lastId
@@ -88,6 +90,9 @@ class Match(object):
         return playersData
 
     def onPlayerReady(self, player):
+        if not self.playing and self.autoStartTimer is None: # Ensure that the game starts even with fewer players
+            self.autoStartTimer = reactor.callLater(60, self.start)
+            
         if self.world == "lobby" or not player.lobbier:
             for p in self.players:
                 if not p.loaded:
@@ -106,9 +111,13 @@ class Match(object):
             self.start()
 
     def start(self):
-        if self.playing:
+        if self.playing or len(self.players) < 10: # We need at-least 10 players to start
             return
         self.playing = True
+        try:
+            self.autoStartTimer.cancel()
+        except:
+            pass
         
         self.world = random.choice(["world-1", "world-2", "world-3", "world-5", "world-6", "world-l1", "world-p"])
         self.broadLoadWorld()

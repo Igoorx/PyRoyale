@@ -35,9 +35,11 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
-        if self.stat == "g" and self.player != None and self.player.match != None:
+
+        if self.stat == "g" and self.player != None:
             self.player.match.removePlayer(self.player)
             self.player.match = None
+            self.stat = str()
 
     def onMessage(self, payload, isBinary):
         if len(payload) == 0:
@@ -52,8 +54,8 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.onTextMessage(payload.decode('utf8'))
         except Exception as e:
             traceback.print_exc()
-            self.recv = str()
             self.transport.loseConnection()
+            self.recv = str()
             return
 
     def sendJSON(self, j):
@@ -63,10 +65,10 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.sendMessage(Buffer().writeInt8(code).write(buff.toString() if isinstance(buff, Buffer) else buff).toString(), True)
     
     def setState(self, state):
+        self.stat = state
         self.sendJSON({"packets": [
             {"state": state, "type": "s00"}
         ], "type": "s01"})
-        self.stat = state
 
     def onTextMessage(self, payload):
         #print("Text message received: {0}".format(payload))
@@ -75,12 +77,10 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         if self.stat == "l":
             if type == "l00": # Input state ready
-                match = self.server.getMatch()
-                if match == None:
-                    self.transport.loseConnection()
-                    return
-
-                self.player = Player(self, packet["name"] if len(packet["name"].strip()) > 0 else "Mario", packet["team"], match)
+                self.player = Player(self,
+                                     packet["name"] if len(packet["name"].strip()) > 0 else "Mario",
+                                     packet["team"],
+                                     self.server.getMatch())
                 self.setState("g") # Ingame
 
         elif self.stat == "g":
@@ -185,7 +185,6 @@ class MyServerFactory(WebSocketServerFactory):
         if fmatch == None:
             fmatch = Match(self)
             self.matches.append(fmatch)
-            print "New match: ", len(self.matches)
 
         return fmatch
 
