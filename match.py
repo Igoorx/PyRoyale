@@ -91,7 +91,7 @@ class Match(object):
 
     def onPlayerReady(self, player):
         if not self.playing and self.autoStartTimer is None: # Ensure that the game starts even with fewer players
-            self.autoStartTimer = reactor.callLater(60, self.start)
+            self.autoStartTimer = reactor.callLater(60, self.start, True)
             
         if self.world == "lobby" or not player.lobbier:
             for p in self.players:
@@ -110,8 +110,8 @@ class Match(object):
         if not self.playing and self.votes >= len(self.players) * 0.85:
             self.start()
 
-    def start(self):
-        if self.playing or len(self.players) < 10: # We need at-least 10 players to start
+    def start(self, forced = False):
+        if self.playing or (not forced and len(self.players) < 10): # We need at-least 10 players to start
             return
         self.playing = True
         try:
