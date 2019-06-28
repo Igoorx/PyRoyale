@@ -205,14 +205,14 @@ class MyServerFactory(WebSocketServerFactory):
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "mcode.txt"), "r") as f:
-                self.mcode = f.read()
+                self.mcode = f.read().strip()
         except:
             pass
         self.statusPath = str()
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "status_path.txt"), "r") as f:
-                self.statusPath = f.read()
+                self.statusPath = f.read().strip()
         except:
             pass
 
