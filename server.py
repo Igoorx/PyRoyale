@@ -10,6 +10,7 @@ reactor = install_reactor(verbose=False,
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from twisted.internet.protocol import Factory
+import os
 import json
 import traceback
 from buffer import Buffer
@@ -202,13 +203,15 @@ class MyServerFactory(WebSocketServerFactory):
 
         self.mcode = str()
         try:
-            with open("mcode.txt", "r") as f:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "mcode.txt"), "r") as f:
                 self.mcode = f.read()
         except:
             pass
         self.statusPath = str()
         try:
-            with open("status_path.txt", "r") as f:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "status_path.txt"), "r") as f:
                 self.statusPath = f.read()
         except:
             pass
