@@ -39,11 +39,10 @@ class MyServerProtocol(WebSocketServerProtocol):
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
         
-        if self.dcTimer is not None:
-            try:
-                self.dcTimer.cancel()
-            except:
-                pass
+        try:
+            self.dcTimer.cancel()
+        except:
+            pass
 
         if self.stat == "g" and self.player != None:
             self.server.playerCount -= 1
@@ -145,6 +144,10 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.level = level
             self.player.zone = zone
             self.player.dead = False
+            try:
+                self.dcTimer.cancel()
+            except:
+                pass
             
             self.player.match.broadBin(0x10, Buffer().writeInt16(self.player.id).write(pktData))
 
