@@ -6,8 +6,8 @@ class Player(object):
         self.server = client.server
         self.match = match
         
-        self.name = name[:20]
-        self.team = team[:3]
+        self.name = name[:20].upper()
+        self.team = team[:3].upper()
         self.level = int()
         self.zone = int()
         self.posX = int()

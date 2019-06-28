@@ -96,7 +96,7 @@ class Match(object):
     def getPlayersData(self):
         playersData = []
         for player in self.players:
-            if not player.loaded or player.dead:
+            if not player.loaded or player.dead or player.win:
                 continue
             playersData.append(player.getSimpleData())
         return playersData
