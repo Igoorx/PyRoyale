@@ -34,6 +34,13 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         print("WebSocket connection open.")
+        
+        self.address = self.transport.getPeer().host
+        if self.server.getPlayerCountByAddress(self.address) >= 3:
+            self.exception("Too many connections")
+            self.transport.loseConnection()
+            return
+        
         self.dcTimer = reactor.callLater(10, self.transport.loseConnection)
         self.setState("l")
 
@@ -46,7 +53,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             pass
 
         if self.stat == "g" and self.player != None:
-            self.server.playerCount -= 1
+            self.server.players.remove(self.player)
             self.player.match.removePlayer(self.player)
             self.player.match = None
             self.player = None
@@ -86,6 +93,11 @@ class MyServerProtocol(WebSocketServerProtocol):
             {"state": state, "type": "s00"}
         ], "type": "s01"})
 
+    def exception(self, message):
+        self.sendJSON({"packets": [
+            {"message": message, "type": "x00"}
+        ], "type": "s01"})
+
     def onTextMessage(self, payload):
         #print("Text message received: {0}".format(payload))
         packet = json.loads(payload)
@@ -106,7 +118,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                                      packet["team"],
                                      self.server.getMatch())
                 self.loginSuccess()
-                self.server.playerCount += 1
+                self.server.players.append(self.player)
                 
                 self.dcTimer = reactor.callLater(10, self.transport.loseConnection)
                 self.setState("g") # Ingame
@@ -233,8 +245,8 @@ class MyServerFactory(WebSocketServerFactory):
     def __init__(self, url):
         WebSocketServerFactory.__init__(self, url)
 
+        self.players = list()
         self.matches = list()
-        self.playerCount = int()
 
         self.mcode = str()
         try:
@@ -257,11 +269,17 @@ class MyServerFactory(WebSocketServerFactory):
         if self.statusPath:
             try:
                 with open(self.statusPath, "w") as f:
-                    f.write('{"active":' + str(self.playerCount) + '}')
+                    f.write('{"active":' + str(len(self.players)) + '}')
             except:
                 pass
             reactor.callLater(5, self.updateStatus)
-        
+
+    def getPlayerCountByAddress(self, address):
+        count = 0
+        for player in self.players:
+            if player.client.address == address:
+                count += 1
+        return count
 
     def buildProtocol(self, addr):
         protocol = MyServerProtocol(self)
