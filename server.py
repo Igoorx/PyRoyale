@@ -173,11 +173,20 @@ class MyServerProtocol(WebSocketServerProtocol):
             
             self.player.match.broadBin(0x13, Buffer().writeInt16(self.player.id).write(pktData))
 
+        elif code == 0x17:
+            killer = b.readInt16()
+            if self.player.id == killer:
+                return
+            killer = self.player.match.getPlayer(killer)
+            if killer is None:
+                return
+            killer.sendBin(0x17, Buffer().writeInt16(self.player.id).write(pktData))
+
         elif code == 0x18: # PLAYER_RESULT_REQUEST
             if self.player.dead or self.player.win:
                 return
             self.player.win = True
-            self.dcTimer = reactor.callLater(15, self.transport.loseConnection)
+            self.dcTimer = reactor.callLater(60, self.transport.loseConnection)
             
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             

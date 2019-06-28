@@ -47,6 +47,12 @@ class Match(object):
 
         if not self.playing and self.votes >= len(self.players) * 0.65:
             self.start()
+
+    def getPlayer(self, pid):
+        for player in self.players:
+            if player.id == pid:
+                return player
+        return None
             
     def getWinners(self):
         self.winners += 1
