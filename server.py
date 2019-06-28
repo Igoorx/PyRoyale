@@ -26,6 +26,8 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.stat = str()
         self.player = None
 
+        self.dcTimer = None
+
     def onConnect(self, request):
         print("Client connecting: {0}".format(request.peer))
 
@@ -35,6 +37,12 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
+
+        if self.dcTimer is not None:
+            try:
+                self.dcTimer.cancel()
+            except:
+                pass
 
         if self.stat == "g" and self.player != None:
             self.player.match.removePlayer(self.player)
@@ -135,7 +143,10 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.match.broadBin(0x10, Buffer().writeInt16(self.player.id).write(pktData))
 
         elif code == 0x11: # KILL_PLAYER_OBJECT
+            if self.player.dead:
+                return
             self.player.dead = True
+            this.dcTimer = reactor.callLater(15, self.transport.loseConnection)
             
             self.player.match.broadBin(0x11, Buffer().writeInt16(self.player.id))
             
@@ -154,7 +165,10 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.match.broadBin(0x13, Buffer().writeInt16(self.player.id).write(pktData))
 
         elif code == 0x18: # PLAYER_RESULT_REQUEST
+            if self.player.dead or self.player.win:
+                return
             self.player.win = True
+            this.dcTimer = reactor.callLater(15, self.transport.loseConnection)
             
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             
