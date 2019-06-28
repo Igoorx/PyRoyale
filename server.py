@@ -33,8 +33,8 @@ class MyServerProtocol(WebSocketServerProtocol):
     def onConnect(self, request):
         print("Client connecting: {0}".format(request.peer))
 
-        if "X-Real-IP" in request.headers:
-            self.address = request.headers["X-Real-IP"]
+        if "x-real-ip" in request.headers:
+            self.address = request.headers["x-real-ip"]
 
     def onOpen(self):
         print("WebSocket connection open.")
