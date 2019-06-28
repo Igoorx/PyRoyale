@@ -34,6 +34,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         print("WebSocket connection open.")
+        self.dcTimer = reactor.callLater(10, self.transport.loseConnection)
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
@@ -94,16 +95,29 @@ class MyServerProtocol(WebSocketServerProtocol):
             if type == "l00": # Input state ready
                 if self.player is not None:
                     return
+                
+                try:
+                    self.dcTimer.cancel()
+                except:
+                    pass
+                
                 self.player = Player(self,
                                      packet["name"] if len(packet["name"].strip()) > 0 else "Mario",
                                      packet["team"],
                                      self.server.getMatch())
                 self.loginSuccess()
                 self.server.playerCount += 1
+                
+                self.dcTimer = reactor.callLater(10, self.transport.loseConnection)
                 self.setState("g") # Ingame
 
         elif self.stat == "g":
             if type == "g00": # Ingame state ready
+                try:
+                    self.dcTimer.cancel()
+                except:
+                    pass
+                
                 self.player.onEnterIngame()
 
             elif type == "g03": # World load completed
@@ -112,6 +126,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             elif type == "g50": # Vote to start
                 if self.player.voted or self.player.match.playing:
                     return
+                
                 self.player.voted = True
                 self.player.match.voteStart()
 
@@ -144,6 +159,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.level = level
             self.player.zone = zone
             self.player.dead = False
+            
             try:
                 self.dcTimer.cancel()
             except:
@@ -154,6 +170,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         elif code == 0x11: # KILL_PLAYER_OBJECT
             if self.player.dead:
                 return
+            
             self.player.dead = True
             self.dcTimer = reactor.callLater(15, self.transport.loseConnection)
             
@@ -177,16 +194,19 @@ class MyServerProtocol(WebSocketServerProtocol):
             killer = b.readInt16()
             if self.player.id == killer:
                 return
+            
             killer = self.player.match.getPlayer(killer)
             if killer is None:
                 return
+
             killer.sendBin(0x17, Buffer().writeInt16(self.player.id).write(pktData))
 
         elif code == 0x18: # PLAYER_RESULT_REQUEST
             if self.player.dead or self.player.win:
                 return
+
             self.player.win = True
-            self.dcTimer = reactor.callLater(60, self.transport.loseConnection)
+            self.dcTimer = reactor.callLater(120, self.transport.loseConnection)
             
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             
