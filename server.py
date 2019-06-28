@@ -34,13 +34,11 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         print("WebSocket connection open.")
-        self.server.playerCount += 1
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
-        self.server.playerCount -= 1
-
+        
         if self.dcTimer is not None:
             try:
                 self.dcTimer.cancel()
@@ -48,8 +46,10 @@ class MyServerProtocol(WebSocketServerProtocol):
                 pass
 
         if self.stat == "g" and self.player != None:
+            self.server.playerCount -= 1
             self.player.match.removePlayer(self.player)
             self.player.match = None
+            self.player = None
             self.stat = str()
 
     def onMessage(self, payload, isBinary):
@@ -93,11 +93,14 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         if self.stat == "l":
             if type == "l00": # Input state ready
+                if self.player is not None:
+                    return
                 self.player = Player(self,
                                      packet["name"] if len(packet["name"].strip()) > 0 else "Mario",
                                      packet["team"],
                                      self.server.getMatch())
                 self.loginSuccess()
+                self.server.playerCount += 1
                 self.setState("g") # Ingame
 
         elif self.stat == "g":
