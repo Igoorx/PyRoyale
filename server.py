@@ -33,10 +33,12 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         print("WebSocket connection open.")
+        self.server.playerCount += 1
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
+        self.server.playerCount -= 1
 
         if self.dcTimer is not None:
             try:
@@ -110,9 +112,9 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.player.voted = True
                 self.player.match.voteStart()
 
-            #elif type == "g51": # (SPECIAL) Force start
-            #    if "super_secret_code" in packet["code"]:
-            #        self.player.match.start(True)
+            elif type == "g51": # (SPECIAL) Force start
+                if self.server.mcode and self.server.mcode in packet["code"]:
+                    self.player.match.start(True)
 
     def onBinaryMessage(self):
         pktLenDict = { 0x10: 6, 0x11: 0, 0x12: 12, 0x13: 1, 0x18: 4, 0x20: 7, 0x30: 7 }
@@ -195,7 +197,33 @@ class MyServerFactory(WebSocketServerFactory):
     def __init__(self, url):
         WebSocketServerFactory.__init__(self, url)
 
-        self.matches = []
+        self.matches = list()
+        self.playerCount = int()
+
+        self.mcode = str()
+        try:
+            with open("mcode.txt", "r") as f:
+                self.mcode = f.read()
+        except:
+            pass
+        self.statusPath = str()
+        try:
+            with open("status_path.txt", "r") as f:
+                self.statusPath = f.read()
+        except:
+            pass
+
+        reactor.callLater(5, self.updateStatus)
+
+    def updateStatus(self):
+        if self.statusPath:
+            try:
+                with open(self.statusPath, "w") as f:
+                    f.write('{"active":' + str(self.playerCount) + '}')
+            except:
+                pass
+            reactor.callLater(5, self.updateStatus)
+        
 
     def buildProtocol(self, addr):
         protocol = MyServerProtocol(self)
