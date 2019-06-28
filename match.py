@@ -6,16 +6,15 @@ class Match(object):
     def __init__(self, server):
         self.server = server
 
-        self.closed = False
-        self.startTimer = int()
-        self.playing = False
         self.world = "lobby"
+        self.closed = False
+        self.playing = False
+        self.autoStartTimer = None
+        self.startTimer = int()
         self.votes = int()
+        self.winners = int()
         self.lastId = -1
         self.players = list()
-        self.winners = int()
-
-        self.autoStartTimer = None
 
     def getNextPlayerId(self):
         self.lastId += 1
@@ -31,10 +30,14 @@ class Match(object):
         self.players.remove(player)
         
         if len(self.players) == 0:
+            try:
+                self.autoStartTimer.cancel()
+            except:
+                pass
             self.server.removeMatch(self)
             return
         
-        if not player.dead:
+        if not player.dead and not player.win: # Don't kill podium players
             self.broadBin(0x11, Buffer().writeInt16(player.id)) # KILL_PLAYER_OBJECT
 
         self.broadPlayerList()
@@ -42,7 +45,7 @@ class Match(object):
         if player.voted:
             self.votes -= 1
 
-        if not self.playing and self.votes >= len(self.players) * 0.60:
+        if not self.playing and self.votes >= len(self.players) * 0.65:
             self.start()
             
     def getWinners(self):
@@ -64,8 +67,6 @@ class Match(object):
 
     def broadLoadWorld(self):
         for player in self.players:
-            player.dead = True
-            player.loaded = False
             player.loadWorld(self.world)
 
     def broadStartTimer(self, time):
@@ -101,8 +102,8 @@ class Match(object):
             except:
                 pass
             self.autoStartTimer = reactor.callLater(60, self.start, True)
-            
-        if self.world == "lobby" or not player.lobbier:
+
+        if self.world == "lobby" or not player.lobbier or self.closed:
             for p in self.players:
                 if not p.loaded:
                     continue
@@ -116,7 +117,7 @@ class Match(object):
 
     def voteStart(self):
         self.votes += 1
-        if not self.playing and self.votes >= len(self.players) * 0.60:
+        if not self.playing and self.votes >= len(self.players) * 0.65:
             self.start()
 
     def start(self, forced = False):

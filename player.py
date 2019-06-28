@@ -6,17 +6,17 @@ class Player(object):
         self.server = client.server
         self.match = match
         
-        self.name = name[:12]
+        self.name = name[:20]
         self.team = team[:3]
         self.level = int()
         self.zone = int()
         self.posX = int()
         self.posY = int()
         self.dead = True
-
-        self.voted = False
-        self.loaded = False
-        self.lobbier = False
+        self.win = bool()
+        self.voted = bool()
+        self.loaded = bool()
+        self.lobbier = bool()
         
         self.id = match.addPlayer(self)
 
@@ -33,6 +33,8 @@ class Player(object):
         return Buffer().writeInt16(self.id).writeInt8(self.level).writeInt8(self.zone).writeShor2(self.posX, self.posY).toString()
 
     def loadWorld(self, worldName):
+        self.dead = True
+        self.loaded = False
         self.sendJSON({"packets": [
             {"game": worldName, "type": "g01"}
         ], "type": "s01"})
@@ -43,18 +45,23 @@ class Player(object):
         ], "type": "s01"})
 
     def onEnterIngame(self):
+        if not self.dead:
+            return
+        
         if self.match.world == "lobby":
             self.lobbier = True
             
-        self.dead = True
-        self.loaded = False
         self.loadWorld(self.match.world)
 
     def onLoadComplete(self):
+        if self.loaded:
+            return
+        
         self.level = 0
         self.zone = 0
         self.posX = 35
         self.posY = 3
+        self.win = False
         self.dead = False
         self.loaded = True
         

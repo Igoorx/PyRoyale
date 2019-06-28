@@ -63,6 +63,11 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def sendBin(self, code, buff):
         self.sendMessage(Buffer().writeInt8(code).write(buff.toString() if isinstance(buff, Buffer) else buff).toString(), True)
+
+    def loginSuccess(self):
+        self.sendJSON({"packets": [
+            {"name": self.player.name, "team": self.player.team, "sid": "i-dont-know-for-what-this-is-used", "type": "l01"}
+        ], "type": "s01"})
     
     def setState(self, state):
         self.stat = state
@@ -81,6 +86,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                                      packet["name"] if len(packet["name"].strip()) > 0 else "Mario",
                                      packet["team"],
                                      self.server.getMatch())
+                self.loginSuccess()
                 self.setState("g") # Ingame
 
         elif self.stat == "g":
@@ -91,10 +97,14 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.player.onLoadComplete()
 
             elif type == "g50": # Vote to start
-                if self.player.voted:
+                if self.player.voted or self.player.match.playing:
                     return
                 self.player.voted = True
                 self.player.match.voteStart()
+
+            #elif type == "g51": # (SPECIAL) Force start
+            #    if "super_secret_code" in packet["code"]:
+            #        self.player.match.start(True)
 
     def onBinaryMessage(self):
         pktLenDict = { 0x10: 6, 0x11: 0, 0x12: 12, 0x13: 1, 0x18: 4, 0x20: 7, 0x30: 7 }
@@ -120,6 +130,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             level, zone, pos = b.readInt8(), b.readInt8(), b.readShor2()
             self.player.level = level
             self.player.zone = zone
+            self.player.dead = False
             
             self.player.match.broadBin(0x10, Buffer().writeInt16(self.player.id).write(pktData))
 
@@ -143,6 +154,8 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.match.broadBin(0x13, Buffer().writeInt16(self.player.id).write(pktData))
 
         elif code == 0x18: # PLAYER_RESULT_REQUEST
+            self.player.win = True
+            
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             
         elif code == 0x20: # OBJECT_EVENT_TRIGGER
