@@ -146,7 +146,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             if self.player.dead:
                 return
             self.player.dead = True
-            this.dcTimer = reactor.callLater(15, self.transport.loseConnection)
+            self.dcTimer = reactor.callLater(15, self.transport.loseConnection)
             
             self.player.match.broadBin(0x11, Buffer().writeInt16(self.player.id))
             
@@ -168,7 +168,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             if self.player.dead or self.player.win:
                 return
             self.player.win = True
-            this.dcTimer = reactor.callLater(15, self.transport.loseConnection)
+            self.dcTimer = reactor.callLater(15, self.transport.loseConnection)
             
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             
