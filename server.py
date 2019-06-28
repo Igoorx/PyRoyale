@@ -22,6 +22,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         WebSocketServerProtocol.__init__(self)
 
         self.server = server
+        self.address = str()
         self.recv = str()
 
         self.stat = str()
@@ -32,10 +33,15 @@ class MyServerProtocol(WebSocketServerProtocol):
     def onConnect(self, request):
         print("Client connecting: {0}".format(request.peer))
 
+        if "X-Real-IP" in request.headers:
+            self.address = request.headers["X-Real-IP"]
+
     def onOpen(self):
         print("WebSocket connection open.")
-        
-        self.address = self.transport.getPeer().host
+
+        if not self.address:
+            self.address = self.transport.getPeer().host
+
         if self.server.getPlayerCountByAddress(self.address) >= 3:
             self.exception("Too many connections")
             self.transport.loseConnection()
