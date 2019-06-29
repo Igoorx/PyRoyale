@@ -1,3 +1,4 @@
+import re
 from twisted.internet import reactor
 from buffer import Buffer
 
@@ -7,7 +8,7 @@ class Player(object):
         self.server = client.server
         self.match = match
         
-        self.name = name[:20].upper()
+        self.name = re.sub(r"[^\x00-\x7F]+", "", name).strip()[:20].upper()
         self.team = team[:3].upper()
         self.pendingWorld = None
         self.level = int()
