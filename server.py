@@ -164,7 +164,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         code = ord(self.recv[0])
         if code not in pktLenDict:
             print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
-            self.recv = self.recv[len(self.recv):]
+            self.recv = str()
             return False
         
         pktLen = pktLenDict[code] + 1
@@ -176,7 +176,8 @@ class MyServerProtocol(WebSocketServerProtocol):
         b = Buffer(pktData)
         
         if not self.player.loaded:
-            return True
+            self.recv = str()
+            return False
         
         if code == 0x10: # CREATE_PLAYER_OBJECT
             level, zone, pos = b.readInt8(), b.readInt8(), b.readShor2()
@@ -250,7 +251,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             
         else:
             print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
-            self.recv = self.recv[len(self.recv):]
+            self.recv = str()
             return False
 
         return True

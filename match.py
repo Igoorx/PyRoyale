@@ -135,6 +135,7 @@ class Match(object):
         if self.playing or (not forced and len(self.players) < 15): # We need at-least 15 players to start
             return
         self.playing = True
+        
         try:
             self.autoStartTimer.cancel()
         except:
