@@ -90,6 +90,8 @@ class Match(object):
     def broadPlayerList(self):
         data = self.getPlayersData()
         for player in self.players:
+            if not player.loaded:
+                continue
             player.sendJSON({"packets": [
                 {"players": (data + ([player.getSimpleData()] if player.dead or player.win else [])),
                  "type": "g12"}

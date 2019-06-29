@@ -11,6 +11,7 @@ reactor = install_reactor(verbose=False,
 from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from twisted.internet.protocol import Factory
 import os
+import random
 import json
 import traceback
 from buffer import Buffer
@@ -28,6 +29,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.pendingStat = None
         self.stat = str()
         self.player = None
+        self.blocked = bool()
 
         self.dcTimer = None
 
@@ -161,7 +163,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                     self.player.match.start(True)
 
     def onBinaryMessage(self):
-        pktLenDict = { 0x10: 6, 0x11: 0, 0x12: 12, 0x13: 1, 0x17: 2, 0x18: 4, 0x20: 7, 0x30: 7 }
+        pktLenDict = { 0x10: 6, 0x11: 0, 0x12: 12, 0x13: 1, 0x17: 2, 0x18: 4, 0x19: 0, 0x20: 7, 0x30: 7 }
         
         code = ord(self.recv[0])
         if code not in pktLenDict:
@@ -177,7 +179,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.recv = self.recv[pktLen:]
         b = Buffer(pktData)
         
-        if not self.player.loaded:
+        if not self.player.loaded or self.blocked:
             self.recv = str()
             return False
         
@@ -241,6 +243,12 @@ class MyServerProtocol(WebSocketServerProtocol):
             
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             
+        elif code == 0x19:
+            if self.blocked:
+                return
+            self.blocked = True
+            self.dcTimer = reactor.callLater(random.randrange(5, 15), self.transport.loseConnection)
+
         elif code == 0x20: # OBJECT_EVENT_TRIGGER
             level, zone, oid, type = b.readInt8(), b.readInt8(), b.readInt32(), b.readInt8()
 
