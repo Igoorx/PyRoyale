@@ -1,3 +1,4 @@
+from twisted.internet import reactor
 from buffer import Buffer
 
 class Player(object):
@@ -8,6 +9,7 @@ class Player(object):
         
         self.name = name[:20].upper()
         self.team = team[:3].upper()
+        self.pendingWorld = None
         self.level = int()
         self.zone = int()
         self.posX = int()
@@ -35,9 +37,11 @@ class Player(object):
     def loadWorld(self, worldName):
         self.dead = True
         self.loaded = False
+        self.pendingWorld = worldName
         self.sendJSON({"packets": [
             {"game": worldName, "type": "g01"}
         ], "type": "s01"})
+        self.client.dcTimer = reactor.callLater(15, self.client.transport.loseConnection)
 
     def setStartTimer(self, time):
         self.sendJSON({"packets": [
@@ -54,8 +58,13 @@ class Player(object):
         self.loadWorld(self.match.world)
 
     def onLoadComplete(self):
-        if self.loaded:
+        if self.loaded or self.pendingWorld is None:
             return
+
+        try:
+            self.client.dcTimer.cancel()
+        except:
+            pass
         
         self.level = 0
         self.zone = 0
@@ -64,6 +73,7 @@ class Player(object):
         self.win = False
         self.dead = False
         self.loaded = True
+        self.pendingWorld = None
         
         self.sendBin(0x02, Buffer().writeInt16(self.id)) # ASSIGN_PID
 
