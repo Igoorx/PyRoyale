@@ -128,7 +128,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                     return
                 
                 self.player = Player(self,
-                                     packet["name"] if len(packet["name"].strip()) > 0 else "Mario",
+                                     packet["name"],
                                      packet["team"],
                                      self.server.getMatch())
                 self.loginSuccess()

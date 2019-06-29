@@ -9,6 +9,8 @@ class Player(object):
         self.match = match
         
         self.name = re.sub(r"[^\x00-\x7F]+", "", name).strip()[:20].upper()
+        if len(self.name) == 0:
+            self.name = "Mario"
         self.team = team[:3].upper()
         self.pendingWorld = None
         self.level = int()

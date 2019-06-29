@@ -94,14 +94,14 @@ class Match(object):
             if not player.loaded:
                 continue
             player.sendJSON({"packets": [
-                {"players": (data + ([player.getSimpleData()] if player.dead or player.win else [])),
+                {"players": (data + ([player.getSimpleData()] if player.dead else [])),
                  "type": "g12"}
             ], "type": "s01"})
 
     def getPlayersData(self):
         playersData = []
         for player in self.players:
-            if not player.loaded or player.dead or player.win:
+            if not player.loaded or player.dead:
                 continue
             playersData.append(player.getSimpleData())
         return playersData
