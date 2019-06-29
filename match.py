@@ -10,6 +10,7 @@ class Match(object):
         self.closed = False
         self.playing = False
         self.autoStartTimer = None
+        self.startingTimer = None
         self.startTimer = int()
         self.votes = int()
         self.winners = int()
@@ -45,7 +46,7 @@ class Match(object):
         if player.voted:
             self.votes -= 1
 
-        if not self.playing and self.votes >= len(self.players) * 0.65:
+        if not self.playing and self.votes >= len(self.players) * 0.85:
             self.start()
 
     def getPlayer(self, pid):
@@ -123,20 +124,25 @@ class Match(object):
         self.broadPlayerList()
 
         if not self.playing:
-            if len(self.getPlayersData()) >= 75:
-                reactor.callLater(5, self.start)
-            elif self.votes >= len(self.players) * 0.65:
+            if self.startingTimer is None and len(self.getPlayersData()) >= 15:
+                self.startingTimer = reactor.callLater(5, self.start)
+            elif self.votes >= len(self.players) * 0.85:
                 self.start()
 
     def voteStart(self):
         self.votes += 1
-        if not self.playing and self.votes >= len(self.players) * 0.65:
+        if not self.playing and self.votes >= len(self.players) * 0.85:
             self.start()
 
     def start(self, forced = False):
-        if self.playing or (not forced and len(self.players) < 15): # We need at-least 15 players to start
+        if self.playing or (not forced and len(self.players) < 10): # We need at-least 10 players to start
             return
         self.playing = True
+        
+        try:
+            self.startingTimer.cancel()
+        except:
+            pass
         
         try:
             self.autoStartTimer.cancel()
