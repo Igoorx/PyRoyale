@@ -88,10 +88,12 @@ class Match(object):
             self.closed = True
 
     def broadPlayerList(self):
-        self.broadJSON({"packets": [
-            {"players": self.getPlayersData(),
-             "type": "g12"}
-        ], "type": "s01"})
+        data = self.getPlayersData()
+        for player in self.players:
+            player.sendJSON({"packets": [
+                {"players": (data + ([player.getSimpleData()] if player.dead or player.win else [])),
+                 "type": "g12"}
+            ], "type": "s01"})
 
     def getPlayersData(self):
         playersData = []
@@ -118,8 +120,11 @@ class Match(object):
                 player.setStartTimer(self.startTimer)
         self.broadPlayerList()
 
-        if not self.playing and len(self.getPlayersData()) >= 75:
-            reactor.callLater(5, self.start)
+        if not self.playing:
+            if len(self.getPlayersData()) >= 75:
+                reactor.callLater(5, self.start)
+            elif self.votes >= len(self.players) * 0.65:
+                self.start()
 
     def voteStart(self):
         self.votes += 1

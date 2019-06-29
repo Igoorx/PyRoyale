@@ -182,7 +182,11 @@ class MyServerProtocol(WebSocketServerProtocol):
             level, zone, pos = b.readInt8(), b.readInt8(), b.readShor2()
             self.player.level = level
             self.player.zone = zone
+            
+            wasDead = self.player.dead
             self.player.dead = False
+            if wasDead:
+                self.player.match.broadPlayerList()
             
             try:
                 self.dcTimer.cancel()
