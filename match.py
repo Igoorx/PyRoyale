@@ -107,7 +107,7 @@ class Match(object):
                 self.autoStartTimer.cancel()
             except:
                 pass
-            self.autoStartTimer = reactor.callLater(60, self.start, True)
+            self.autoStartTimer = reactor.callLater(30, self.start, True)
 
         if self.world == "lobby" or not player.lobbier or self.closed:
             for p in self.players:
