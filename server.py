@@ -66,6 +66,8 @@ class MyServerProtocol(WebSocketServerProtocol):
         if len(payload) == 0:
             return
 
+        self.server.messages += 1
+
         try:
             if isBinary:
                 self.recv += payload
@@ -280,16 +282,24 @@ class MyServerFactory(WebSocketServerFactory):
         except:
             pass
 
-        reactor.callLater(5, self.updateStatus)
+        self.messages = 0
 
-    def updateStatus(self):
+        reactor.callLater(5, self.generalUpdate)
+
+    def generalUpdate(self):
+        playerCount = len(self.players)
+
+        print "pc: {0}, mc: {1}, mp5s: {2}".format(playerCount, len(self.matches), self.messages)
+        self.messages = 0
+        
         if self.statusPath:
             try:
                 with open(self.statusPath, "w") as f:
-                    f.write('{"active":' + str(len(self.players)) + '}')
+                    f.write('{"active":' + str(playerCount) + '}')
             except:
                 pass
-            reactor.callLater(5, self.updateStatus)
+            
+        reactor.callLater(5, self.generalUpdate)
 
     def getPlayerCountByAddress(self, address):
         count = 0
