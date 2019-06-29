@@ -138,5 +138,5 @@ class Match(object):
         self.world = random.choice(["world-1", "world-2", "world-3", "world-5", "world-6", "world-l1", "world-p"])
         self.broadLoadWorld()
 
-        reactor.callLater(1, self.broadStartTimer, 5)
+        reactor.callLater(1, self.broadStartTimer, 7)
         

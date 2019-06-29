@@ -25,6 +25,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.address = str()
         self.recv = str()
 
+        self.pendingStat = None
         self.stat = str()
         self.player = None
 
@@ -41,13 +42,8 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         if not self.address:
             self.address = self.transport.getPeer().host
-
-        if self.server.getPlayerCountByAddress(self.address) >= 3:
-            self.exception("Too many connections")
-            self.transport.loseConnection()
-            return
-        
-        self.dcTimer = reactor.callLater(10, self.transport.loseConnection)
+ 
+        self.dcTimer = reactor.callLater(25, self.transport.loseConnection)
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
@@ -63,6 +59,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.match.removePlayer(self.player)
             self.player.match = None
             self.player = None
+            self.pendingStat = None
             self.stat = str()
 
     def onMessage(self, payload, isBinary):
@@ -94,7 +91,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         ], "type": "s01"})
     
     def setState(self, state):
-        self.stat = state
+        self.stat = self.pendingStat = state
         self.sendJSON({"packets": [
             {"state": state, "type": "s00"}
         ], "type": "s01"})
@@ -111,13 +108,20 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         if self.stat == "l":
             if type == "l00": # Input state ready
-                if self.player is not None:
+                if self.pendingStat is None:
+                    self.transport.loseConnection()
                     return
+                self.pendingStat = None
                 
                 try:
                     self.dcTimer.cancel()
                 except:
                     pass
+
+                if self.server.getPlayerCountByAddress(self.address) >= 3:
+                    self.exception("Too many connections")
+                    self.transport.loseConnection()
+                    return
                 
                 self.player = Player(self,
                                      packet["name"] if len(packet["name"].strip()) > 0 else "Mario",
@@ -126,23 +130,25 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.loginSuccess()
                 self.server.players.append(self.player)
                 
-                self.dcTimer = reactor.callLater(10, self.transport.loseConnection)
                 self.setState("g") # Ingame
 
         elif self.stat == "g":
             if type == "g00": # Ingame state ready
-                try:
-                    self.dcTimer.cancel()
-                except:
-                    pass
+                if self.player is None or self.pendingStat is None:
+                    self.transport.loseConnection()
+                    return
+                self.pendingStat = None
                 
                 self.player.onEnterIngame()
 
             elif type == "g03": # World load completed
+                if self.player is None:
+                    self.transport.loseConnection()
+                    return
                 self.player.onLoadComplete()
 
             elif type == "g50": # Vote to start
-                if self.player.voted or self.player.match.playing:
+                if self.player is None or self.player.voted or self.player.match.playing:
                     return
                 
                 self.player.voted = True
