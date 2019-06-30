@@ -124,7 +124,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                 except:
                     pass
 
-                if self.server.getPlayerCountByAddress(self.address) >= self.server.maxSimulIP:
+                if self.address != "127.0.0.1" and self.server.getPlayerCountByAddress(self.address) >= self.server.maxSimulIP:
                     self.exception("Too many connections")
                     self.transport.loseConnection()
                     return
@@ -344,8 +344,8 @@ class MyServerFactory(WebSocketServerFactory):
     def getMatch(self):
         fmatch = None
         for match in self.matches:
-            if len(match.players) <= self.server.playerCap and not match.closed:
-                if not self.server.allowLateEnter and match.playing:
+            if not match.closed and len(match.players) < self.playerCap:
+                if not self.allowLateEnter and match.playing:
                     continue
                 fmatch = match
                 break
