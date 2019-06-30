@@ -15,6 +15,7 @@ This project uses Python <b>2.7</b> and the following dependencies:
 - Twisted
 - AutoBahn
 - Emoji
+- ConfigParser
 
 <b>If you are on Windows, the module <u>pypiwin32</u> may also be required.</b> 
 
