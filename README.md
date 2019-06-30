@@ -8,14 +8,15 @@ I really liked the idea of this game and, as I already imagined that it would fa
 You can discuss about the game and this emulator in [our discord](https://discord.gg/63SBFj).
 
 ## Binaries
-If you are on Windows and don't want to install python to run this server, you can use the lastest binary released in the [releases page](https://github.com/Igoorx/PyRoyale/releases).
+If you are on Windows and don't want to install python to run this server, you can use the latest binary released in the [releases page](https://github.com/Igoorx/PyRoyale/releases).
 
 ## Dependencies
-This project uses Python <b>2.7</b> and the following modules:
+This project uses Python <b>2.7</b> and the following dependencies:
 - Twisted
 - AutoBahn
+- Emoji
 
-<b>If you are on Windows the module <u>pypiwin32</u> may also be required.</b> 
+<b>If you are on Windows, the module <u>pypiwin32</u> may also be required.</b> 
 
 ## Tutorial
 Oops.. There isn't yet a tutorial, but you can get help in [our discord](https://discord.gg/63SBFj).

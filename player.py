@@ -1,4 +1,5 @@
 import re
+import emoji
 from twisted.internet import reactor
 from buffer import Buffer
 
@@ -8,9 +9,9 @@ class Player(object):
         self.server = client.server
         self.match = match
         
-        self.name = re.sub(r"[^\x00-\x7F]+", "", name).strip()[:20].upper()
+        self.name = ' '.join(emoji.emojize(re.sub(r"[^\x00-\x7F]+", "", emoji.demojize(name)).strip())[:20].split()).upper()
         if len(self.name) == 0:
-            self.name = "Mario"
+            self.name = "MARIO"
         self.team = team[:3].upper()
         self.pendingWorld = None
         self.level = int()
