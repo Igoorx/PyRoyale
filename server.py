@@ -269,13 +269,13 @@ class MyServerProtocol(WebSocketServerProtocol):
         return True
 
 class MyServerFactory(WebSocketServerFactory):
-    def __init__(self):
+    def __init__(self, url):
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "server.cfg"), "r") as f:
             self.configHash = hashlib.md5(f.read()).hexdigest()
         self.readConfig(self.configHash)
         
-        WebSocketServerFactory.__init__(self, u"ws://127.0.0.1:{0}/royale/ws".format(self.listenPort))
+        WebSocketServerFactory.__init__(self, url.format(self.listenPort))
 
         self.players = list()
         self.matches = list()
@@ -362,7 +362,7 @@ class MyServerFactory(WebSocketServerFactory):
                 
 
 if __name__ == '__main__':
-    factory = MyServerFactory()
+    factory = MyServerFactory(u"ws://127.0.0.1:{0}/royale/ws")
     # factory.setProtocolOptions(maxConnections=2)
 
     reactor.listenTCP(factory.listenPort, factory)

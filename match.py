@@ -46,7 +46,7 @@ class Match(object):
         if player.voted:
             self.votes -= 1
 
-        if not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
+        if self.server.enableVoteStart and not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
             self.start()
 
     def getPlayer(self, pid):
@@ -125,19 +125,17 @@ class Match(object):
 
         if not self.playing:
             if self.startingTimer is None and len(self.getPlayersData()) >= self.server.playerCap:
-                self.startingTimer = reactor.callLater(3, self.start)
-            elif self.votes >= len(self.players) * self.server.voteRateToStart:
+                self.startingTimer = reactor.callLater(3, self.start, True)
+            elif self.server.enableVoteStart and self.votes >= len(self.players) * self.server.voteRateToStart:
                 self.start()
 
     def voteStart(self):
         self.votes += 1
-        if not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
+        if self.server.enableVoteStart and not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
             self.start()
 
     def start(self, forced = False):
         if self.playing or (not forced and len(self.players) < self.server.playerMin): # We need at-least 10 players to start
-            return
-        if not self.server.enableVoteStart and len(self.players) < self.server.playerCap:
             return
         self.playing = True
         
