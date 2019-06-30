@@ -137,7 +137,7 @@ class Match(object):
     def start(self, forced = False):
         if self.playing or (not forced and len(self.players) < self.server.playerMin): # We need at-least 10 players to start
             return
-        if not self.server.enableVoteStart and len(self.players) < self.server.playerCap):
+        if not self.server.enableVoteStart and len(self.players) < self.server.playerCap:
             return
         self.playing = True
         
