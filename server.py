@@ -12,8 +12,10 @@ from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerF
 from twisted.internet.protocol import Factory
 import os
 import random
-import json
+import hashlib
 import traceback
+import json
+import ConfigParser
 from buffer import Buffer
 from player import Player
 from match import Match
@@ -122,7 +124,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                 except:
                     pass
 
-                if self.server.getPlayerCountByAddress(self.address) >= 3:
+                if self.server.getPlayerCountByAddress(self.address) >= self.server.maxSimulIP:
                     self.exception("Too many connections")
                     self.transport.loseConnection()
                     return
@@ -265,40 +267,58 @@ class MyServerProtocol(WebSocketServerProtocol):
             return False
 
         return True
-            
-
 
 class MyServerFactory(WebSocketServerFactory):
-    def __init__(self, url):
-        WebSocketServerFactory.__init__(self, url)
+    def __init__(self):
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "server.cfg"), "r") as f:
+            self.configHash = hashlib.md5(f.read()).hexdigest()
+        self.readConfig(self.configHash)
+        
+        WebSocketServerFactory.__init__(self, u"ws://127.0.0.1:{0}/royale/ws".format(self.listenPort))
 
         self.players = list()
         self.matches = list()
 
-        self.mcode = str()
-        try:
-            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   "mcode.txt"), "r") as f:
-                self.mcode = f.read().strip()
-        except:
-            pass
-        self.statusPath = str()
-        try:
-            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   "status_path.txt"), "r") as f:
-                self.statusPath = f.read().strip()
-        except:
-            pass
-
         self.messages = 0
 
         reactor.callLater(5, self.generalUpdate)
+
+    def readConfig(self, cfgHash):
+        self.configHash = cfgHash
+            
+        config = ConfigParser.ConfigParser()
+        config.read('server.cfg')
+
+        self.listenPort = config.getint('Server', 'ListenPort')
+        self.mcode = config.get('Server', 'MCode').strip()
+        self.statusPath = config.get('Server', 'StatusPath').strip()
+        self.defaultName = config.get('Server', 'DefaultName').strip()
+        self.defaultTeam = config.get('Server', 'DefaultTeam').strip()
+        self.maxSimulIP = config.getint('Server', 'MaxSimulIP')
+        self.playerMin = config.getint('Match', 'PlayerMin')
+        self.playerCap = config.getint('Match', 'PlayerCap')
+        self.startTimer = config.getint('Match', 'StartTimer')
+        self.enableVoteStart = config.getboolean('Match', 'EnableVoteStart')
+        self.voteRateToStart = config.getfloat('Match', 'VoteRateToStart')
+        self.allowLateEnter = config.getboolean('Match', 'AllowLateEnter')
+        self.worlds = config.get('Match', 'Worlds').strip().split(',')
 
     def generalUpdate(self):
         playerCount = len(self.players)
 
         print "pc: {0}, mc: {1}, mp5s: {2}".format(playerCount, len(self.matches), self.messages)
         self.messages = 0
+
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "server.cfg"), "r") as f:
+                cfgHash = hashlib.md5(f.read()).hexdigest()
+                if cfgHash != self.configHash:
+                    self.readConfig(cfgHash)
+                    print "Configuration reloaded."
+        except:
+            print "Failed to reload configuration."
         
         if self.statusPath:
             try:
@@ -324,7 +344,9 @@ class MyServerFactory(WebSocketServerFactory):
     def getMatch(self):
         fmatch = None
         for match in self.matches:
-            if len(match.players) < 25 and not match.closed:
+            if len(match.players) <= self.server.playerCap and not match.closed:
+                if not self.server.allowLateEnter and match.playing:
+                    continue
                 fmatch = match
                 break
 
@@ -340,8 +362,8 @@ class MyServerFactory(WebSocketServerFactory):
                 
 
 if __name__ == '__main__':
-    factory = MyServerFactory(u"ws://127.0.0.1:9000/royale/ws")
+    factory = MyServerFactory()
     # factory.setProtocolOptions(maxConnections=2)
 
-    reactor.listenTCP(9000, factory)
+    reactor.listenTCP(factory.listenPort, factory)
     reactor.run()

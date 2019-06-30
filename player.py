@@ -11,8 +11,10 @@ class Player(object):
         
         self.name = ' '.join(emoji.emojize(re.sub(r"[^\x00-\x7F]+", "", emoji.demojize(name)).strip())[:20].split()).upper()
         if len(self.name) == 0:
-            self.name = "MARIO"
+            self.name = self.server.defaultName
         self.team = team[:3].upper()
+        if self.team.strip() == "":
+            self.team = self.server.defaultTeam
         self.pendingWorld = None
         self.level = int()
         self.zone = int()

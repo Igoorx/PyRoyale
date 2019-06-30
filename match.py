@@ -46,7 +46,7 @@ class Match(object):
         if player.voted:
             self.votes -= 1
 
-        if not self.playing and self.votes >= len(self.players) * 0.85:
+        if not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
             self.start()
 
     def getPlayer(self, pid):
@@ -124,18 +124,20 @@ class Match(object):
         self.broadPlayerList()
 
         if not self.playing:
-            if self.startingTimer is None and len(self.getPlayersData()) >= 25:
+            if self.startingTimer is None and len(self.getPlayersData()) >= self.server.playerCap:
                 self.startingTimer = reactor.callLater(3, self.start)
-            elif self.votes >= len(self.players) * 0.85:
+            elif self.votes >= len(self.players) * self.server.voteRateToStart:
                 self.start()
 
     def voteStart(self):
         self.votes += 1
-        if not self.playing and self.votes >= len(self.players) * 0.85:
+        if not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
             self.start()
 
     def start(self, forced = False):
-        if self.playing or (not forced and len(self.players) < 10): # We need at-least 10 players to start
+        if self.playing or (not forced and len(self.players) < self.server.playerMin): # We need at-least 10 players to start
+            return
+        if not self.server.enableVoteStart and len(self.players) < self.server.playerCap):
             return
         self.playing = True
         
@@ -149,8 +151,8 @@ class Match(object):
         except:
             pass
         
-        self.world = random.choice(["world-1", "world-2", "world-3", "world-5", "world-6", "world-l1", "world-p"])
+        self.world = random.choice(self.server.worlds)
         self.broadLoadWorld()
 
-        reactor.callLater(1, self.broadStartTimer, 7)
+        reactor.callLater(1, self.broadStartTimer, self.server.startTimer)
         

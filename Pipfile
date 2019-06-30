@@ -9,6 +9,7 @@ verify_ssl = true
 twisted = "*"
 autobahn = "*"
 emoji = "*"
+configparser = "*"
 
 [requires]
 python_version = "2.7"
