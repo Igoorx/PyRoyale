@@ -179,7 +179,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.recv = self.recv[pktLen:]
         b = Buffer(pktData)
         
-        if not self.player.loaded or self.blocked:
+        if not self.player.loaded or self.blocked or (not self.player.match.closed and self.player.match.playing):
             self.recv = str()
             return False
         
@@ -324,7 +324,7 @@ class MyServerFactory(WebSocketServerFactory):
     def getMatch(self):
         fmatch = None
         for match in self.matches:
-            if len(match.players) < 75 and not match.closed:
+            if len(match.players) < 25 and not match.closed:
                 fmatch = match
                 break
 

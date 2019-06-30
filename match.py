@@ -124,8 +124,8 @@ class Match(object):
         self.broadPlayerList()
 
         if not self.playing:
-            if self.startingTimer is None and len(self.getPlayersData()) >= 15:
-                self.startingTimer = reactor.callLater(5, self.start)
+            if self.startingTimer is None and len(self.getPlayersData()) >= 25:
+                self.startingTimer = reactor.callLater(3, self.start)
             elif self.votes >= len(self.players) * 0.85:
                 self.start()
 
