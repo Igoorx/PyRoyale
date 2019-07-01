@@ -10,6 +10,8 @@ class Player(object):
         self.match = match
         
         self.name = ' '.join(emoji.emojize(re.sub(r"[^\x00-\x7F]+", "", emoji.demojize(name)).strip())[:20].split()).upper()
+        if self.server.checkCurse(self.name):
+            self.name = str()
         if len(self.name) == 0:
             self.name = self.server.defaultName
         self.team = team[:3].upper()

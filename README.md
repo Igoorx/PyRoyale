@@ -1,5 +1,5 @@
 # PyRoyale
-A open-source emulator for Mario Royale browser game.
+A open-source server emulator for Mario Royale browser game.
 
 ![ScreenShot](https://i.imgur.com/4gpGSLs.png)
 

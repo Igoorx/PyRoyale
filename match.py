@@ -32,6 +32,10 @@ class Match(object):
         
         if len(self.players) == 0:
             try:
+                self.startingTimer.cancel()
+            except:
+                pass
+            try:
                 self.autoStartTimer.cancel()
             except:
                 pass
@@ -45,8 +49,7 @@ class Match(object):
 
         if player.voted:
             self.votes -= 1
-
-        if self.server.enableVoteStart and not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
+        elif self.server.enableVoteStart and not self.playing and self.votes >= len(self.players) * self.server.voteRateToStart:
             self.start()
 
     def getPlayer(self, pid):
@@ -123,11 +126,8 @@ class Match(object):
                 player.setStartTimer(self.startTimer)
         self.broadPlayerList()
 
-        if not self.playing:
-            if self.startingTimer is None and len(self.getPlayersData()) >= self.server.playerCap:
-                self.startingTimer = reactor.callLater(3, self.start, True)
-            elif self.server.enableVoteStart and self.votes >= len(self.players) * self.server.voteRateToStart:
-                self.start()
+        if not self.playing and self.startingTimer is None and len(self.players) >= self.server.playerCap:
+            self.startingTimer = reactor.callLater(3, self.start, True)
 
     def voteStart(self):
         self.votes += 1

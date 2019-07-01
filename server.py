@@ -39,13 +39,13 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.dcTimer = None
 
     def onConnect(self, request):
-        print("Client connecting: {0}".format(request.peer))
+        #print("Client connecting: {0}".format(request.peer))
 
         if "x-real-ip" in request.headers:
             self.address = request.headers["x-real-ip"]
 
     def onOpen(self):
-        print("WebSocket connection open.")
+        #print("WebSocket connection open.")
 
         if not self.address:
             self.address = self.transport.getPeer().host
@@ -54,7 +54,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
-        print("WebSocket connection closed: {0}".format(reason))
+        #print("WebSocket connection closed: {0}".format(reason))
         
         try:
             self.dcTimer.cancel()
@@ -185,7 +185,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         
         code = ord(self.recv[0])
         if code not in pktLenDict:
-            print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
+            #print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
             self.recv = str()
             return False
             
@@ -312,6 +312,14 @@ class MyServerFactory(WebSocketServerFactory):
 
         self.players = list()
         self.matches = list()
+        
+        self.curse = list()
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "words.json"), "r") as f:
+                self.curse = json.loads(f.read())
+        except:
+            pass
 
         self.blockedAddresses = list()
         try:
@@ -369,6 +377,15 @@ class MyServerFactory(WebSocketServerFactory):
                 pass
             
         reactor.callLater(5, self.generalUpdate)
+
+    def checkCurse(self, str):
+        if len(str) <= 3:
+            return False
+        str = str.lower()
+        for w in self.curse:
+            if w in str:
+                return True
+        return False
 
     def blockAddress(self, address):
         if not address in self.blockedAddresses:
