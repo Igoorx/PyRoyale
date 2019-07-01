@@ -1,9 +1,9 @@
 # PyRoyale
-A preliminary open-source emulator for Mario Royale browser game.
+A open-source emulator for Mario Royale browser game.
 
 ![ScreenShot](https://i.imgur.com/4gpGSLs.png)
 
-I really liked the idea of this game and, as I already imagined that it would fall for the DMCA, I did a server for it, but this server is not currently the best thing in the world, its purpose is to only allow playing with friends, the use of it to other reasons can be dangerous since it has no anti-hack protection.
+I really liked the idea of this addictive game and, as I already imagined that it would fall for a DMCA, I did a server emulator for it. This server's purpose is to allow playing with friends, but you're free to do anything you want with it.
 
 You can discuss about the game and this emulator in [our discord](https://discord.gg/RqszZY6).
 
