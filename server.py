@@ -383,6 +383,8 @@ class MyServerFactory(WebSocketServerFactory):
             return False
         str = str.lower()
         for w in self.curse:
+            if len(w) <= 3:
+                continue
             if w in str:
                 return True
         return False
