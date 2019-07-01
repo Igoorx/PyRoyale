@@ -31,6 +31,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.pendingStat = None
         self.stat = str()
         self.player = None
+        self.trustCount = int()
         self.blocked = bool()
 
         self.lastX = int()
@@ -110,14 +111,14 @@ class MyServerProtocol(WebSocketServerProtocol):
             {"message": message, "type": "x00"}
         ], "type": "s01"})
 
-    def block(self):
+    def block(self, reason):
         if self.blocked:
             return
         print "Player blocked: {0}".format(self.player.name)
         self.blocked = True
         if not self.player.dead:
             self.player.match.broadBin(0x11, Buffer().writeInt16(self.player.id), self.player.id) # KILL_PLAYER_OBJECT
-        self.server.blockAddress(self.address)
+        self.server.blockAddress(self.address, self.player.name, reason)
 
     def onTextMessage(self, payload):
         #print("Text message received: {0}".format(payload))
@@ -141,8 +142,9 @@ class MyServerProtocol(WebSocketServerProtocol):
                     self.transport.loseConnection()
                     return
 
-                if self.address in self.server.blockedAddresses:
-                    self.blocked = True
+                for b in self.server.blocked:
+                    if b[0] == self.address:
+                        self.blocked = True
                 
                 self.player = Player(self,
                                      packet["name"],
@@ -238,7 +240,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.posY = pos[1]
 
             if ((self.player.posX < 23 or self.player.posY >= 58.5) or sprite > 5) and self.player.match.world == "lobby" and zone == 0:
-                self.block()
+                self.block(0x1)
                 return
             
             self.player.match.broadBin(0x12, Buffer().writeInt16(self.player.id).write(pktData))
@@ -250,7 +252,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             type = b.readInt8()
 
             if self.player.match.world == "lobby":
-                self.block()
+                self.block(0x2)
                 return
             
             self.player.match.broadBin(0x13, Buffer().writeInt16(self.player.id).write(pktData))
@@ -276,7 +278,9 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             
         elif code == 0x19:
-            self.block()
+            self.trustCount += 1
+            if self.trustCount > 8:
+                self.block(0x3)
 
         elif code == 0x20: # OBJECT_EVENT_TRIGGER
             if self.player.dead:
@@ -321,11 +325,11 @@ class MyServerFactory(WebSocketServerFactory):
         except:
             pass
 
-        self.blockedAddresses = list()
+        self.blocked = list()
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "blocked.json"), "r") as f:
-                self.blockedAddresses = json.loads(f.read())
+                self.blocked = json.loads(f.read())
         except:
             pass
 
@@ -389,13 +393,13 @@ class MyServerFactory(WebSocketServerFactory):
                 return True
         return False
 
-    def blockAddress(self, address):
-        if not address in self.blockedAddresses:
-            self.blockedAddresses.append(address)
+    def blockAddress(self, address, playerName, reason):
+        if not address in self.blocked:
+            self.blocked.append([address, playerName, reason])
             try:
                 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "blocked.json"), "w") as f:
-                    f.write(json.dumps(self.blockedAddresses))
+                    f.write(json.dumps(self.blocked))
             except:
                 pass
 
