@@ -11,10 +11,10 @@ reactor = install_reactor(verbose=False,
 from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from twisted.internet.protocol import Factory
 import os
+import json
 import random
 import hashlib
 import traceback
-import json
 import ConfigParser
 from buffer import Buffer
 from player import Player
@@ -32,6 +32,9 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.stat = str()
         self.player = None
         self.blocked = bool()
+
+        self.lastX = int()
+        self.lastXOk = True
 
         self.dcTimer = None
 
@@ -107,6 +110,15 @@ class MyServerProtocol(WebSocketServerProtocol):
             {"message": message, "type": "x00"}
         ], "type": "s01"})
 
+    def block(self):
+        if self.blocked:
+            return
+        print "Player blocked: {0}".format(self.player.name)
+        self.blocked = True
+        if not self.player.dead:
+            self.player.match.broadBin(0x11, Buffer().writeInt16(self.player.id), self.player.id) # KILL_PLAYER_OBJECT
+        self.server.blockAddress(self.address)
+
     def onTextMessage(self, payload):
         #print("Text message received: {0}".format(payload))
         packet = json.loads(payload)
@@ -128,6 +140,9 @@ class MyServerProtocol(WebSocketServerProtocol):
                     self.exception("Too many connections")
                     self.transport.loseConnection()
                     return
+
+                if self.address in self.server.blockedAddresses:
+                    self.blocked = True
                 
                 self.player = Player(self,
                                      packet["name"],
@@ -151,6 +166,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                 if self.player is None:
                     self.transport.loseConnection()
                     return
+                self.lastXOk = True
                 self.player.onLoadComplete()
 
             elif type == "g50": # Vote to start
@@ -172,7 +188,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
             self.recv = str()
             return False
-        
+            
         pktLen = pktLenDict[code] + 1
         if len(self.recv) < pktLen:
             return False
@@ -212,16 +228,30 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.match.broadBin(0x11, Buffer().writeInt16(self.player.id))
             
         elif code == 0x12: # UPDATE_PLAYER_OBJECT
+            if self.player.dead:
+                return
+
             level, zone, pos, sprite, reverse = b.readInt8(), b.readInt8(), b.readVec2(), b.readInt8(), b.readBool()
             self.player.level = level
             self.player.zone = zone
             self.player.posX = pos[0]
             self.player.posY = pos[1]
+
+            if ((self.player.posX < 23 or self.player.posY >= 58.5) or sprite > 5) and self.player.match.world == "lobby" and zone == 0:
+                self.block()
+                return
             
             self.player.match.broadBin(0x12, Buffer().writeInt16(self.player.id).write(pktData))
             
         elif code == 0x13: # PLAYER_OBJECT_EVENT
+            if self.player.dead:
+                return
+
             type = b.readInt8()
+
+            if self.player.match.world == "lobby":
+                self.block()
+                return
             
             self.player.match.broadBin(0x13, Buffer().writeInt16(self.player.id).write(pktData))
 
@@ -246,17 +276,20 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.match.broadBin(0x18, Buffer().writeInt16(self.player.id).writeInt8(self.player.match.getWinners()).writeInt8(0))
             
         elif code == 0x19:
-            if self.blocked:
-                return
-            self.blocked = True
-            self.dcTimer = reactor.callLater(random.randrange(5, 15), self.transport.loseConnection)
+            self.block()
 
         elif code == 0x20: # OBJECT_EVENT_TRIGGER
+            if self.player.dead:
+                return
+
             level, zone, oid, type = b.readInt8(), b.readInt8(), b.readInt32(), b.readInt8()
 
             self.player.match.broadBin(0x20, Buffer().writeInt16(self.player.id).write(pktData))
             
         elif code == 0x30: # TILE_EVENT_TRIGGER
+            if self.player.dead:
+                return
+
             level, zone, pos, type = b.readInt8(), b.readInt8(), b.readShor2(), b.readInt8()
 
             self.player.match.broadBin(0x30, Buffer().writeInt16(self.player.id).write(pktData))
@@ -271,7 +304,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 class MyServerFactory(WebSocketServerFactory):
     def __init__(self, url):
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   "server.cfg"), "r") as f:
+                               "server.cfg"), "r") as f:
             self.configHash = hashlib.md5(f.read()).hexdigest()
         self.readConfig(self.configHash)
         
@@ -279,6 +312,14 @@ class MyServerFactory(WebSocketServerFactory):
 
         self.players = list()
         self.matches = list()
+
+        self.blockedAddresses = list()
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "blocked.json"), "r") as f:
+                self.blockedAddresses = json.loads(f.read())
+        except:
+            pass
 
         self.messages = 0
 
@@ -312,7 +353,7 @@ class MyServerFactory(WebSocketServerFactory):
 
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               "server.cfg"), "r") as f:
+                                   "server.cfg"), "r") as f:
                 cfgHash = hashlib.md5(f.read()).hexdigest()
                 if cfgHash != self.configHash:
                     self.readConfig(cfgHash)
@@ -328,6 +369,16 @@ class MyServerFactory(WebSocketServerFactory):
                 pass
             
         reactor.callLater(5, self.generalUpdate)
+
+    def blockAddress(self, address):
+        if not address in self.blockedAddresses:
+            self.blockedAddresses.append(address)
+            try:
+                with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "blocked.json"), "w") as f:
+                    f.write(json.dumps(self.blockedAddresses))
+            except:
+                pass
 
     def getPlayerCountByAddress(self, address):
         count = 0

@@ -65,10 +65,10 @@ class Match(object):
                 continue
             player.sendJSON(j)
 
-    def broadBin(self, code, buff):
+    def broadBin(self, code, buff, ignore = None):
         buff = buff.toString() if isinstance(buff, Buffer) else buff
         for player in self.players:
-            if not player.loaded:
+            if not player.loaded or (ignore is not None and player.id == ignore):
                 continue
             player.sendBin(code, buff)
 
