@@ -49,10 +49,11 @@ In linux there's only one option, setup everything from the base.
 
 ### 1 - Get python and git
 
-Use your OS package manager to install `git`, `python2.7` and `python-pip`, in debian or ubuntu you can use apt-get like this:
+Use your OS package manager to install `git` and `python3.7`, in debian or ubuntu you can use apt-get like this:
+
 `sudo apt-get install git`
-`sudo apt-get install python2.7`
-`sudo apt-get install python-pip`
+
+`sudo apt-get install python3.7`
 
 ### 2 - Download this repository, install it's dependencies and run the server
 
@@ -60,13 +61,11 @@ To download this repository just go to some path and run this command:
 `git clone https://github.com/Igoorx/PyRoyale.git`
 The server will be at `./PyRoyale` path, so just run `cd PyRoyale`
 
-After that, run these commands to install the dependencies:
-`sudo pip install twisted`
-`sudo pip install autobahn`
-`sudo pip install emoji`
-`sudo pip install configparser`
+After that, run this command to install the dependencies:
+`sudo python3.7 -m pip install -r requirements.txt`
+- If you get the error code 1, run this command `sudo apt-get build-essential python3.7-dev`and try again.
 
-now just run the command `python server.py </dev/null &>/dev/null &` to start the server.
+now just run the command `python3.7 server.py </dev/null &>/dev/null &` to start the server.
 
 ### 3 - Get the website to run
 
