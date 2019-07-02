@@ -40,7 +40,7 @@ class Player(object):
         return {"id": self.id, "name": self.name, "team": self.team}
 
     def serializePlayerObject(self):
-        return Buffer().writeInt16(self.id).writeInt8(self.level).writeInt8(self.zone).writeShor2(self.posX, self.posY).toString()
+        return Buffer().writeInt16(self.id).writeInt8(self.level).writeInt8(self.zone).writeShor2(self.posX, self.posY).toBytes()
 
     def loadWorld(self, worldName):
         self.dead = True

@@ -69,7 +69,7 @@ class Match(object):
             player.sendJSON(j)
 
     def broadBin(self, code, buff, ignore = None):
-        buff = buff.toString() if isinstance(buff, Buffer) else buff
+        buff = buff.toBytes() if isinstance(buff, Buffer) else buff
         for player in self.players:
             if not player.loaded or (ignore is not None and player.id == ignore):
                 continue

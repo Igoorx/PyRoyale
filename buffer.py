@@ -1,7 +1,7 @@
 import struct
 
 class Buffer:
-    def __init__(self, data=""):
+    def __init__(self, data=bytes()):
         self.buffer = data
     
     def write(self, data):
@@ -14,34 +14,28 @@ class Buffer:
         return data
     
     def writeInt8(self, data):
-        self.write(chr((data) & 0xFF))
+        self.write(bytes([data & 0xFF]))
         return self
     
     def readInt8(self):
         return ord(self.read())
     
     def writeInt16(self, data):
-        self.writeInt8((data >> 8) & 0xFF)
-        self.writeInt8((data >> 0) & 0xFF)
+        self.write(bytes([(data >> 8) & 0xFF, (data >> 0) & 0xFF]))
         return self
     
     def readInt16(self):
         return self.readInt8() << 8 | self.readInt8() << 0
     
     def writeInt24(self, data):
-        self.writeInt8((data >> 16) & 0xFF)
-        self.writeInt8((data >> 8) & 0xFF)
-        self.writeInt8((data >> 0) & 0xFF)
+        self.write(bytes([(data >> 16) & 0xFF, (data >> 8) & 0xFF, (data >> 0) & 0xFF]))
         return self
     
     def readInt24(self):
         return self.readInt8() << 16 | self.readInt8() << 8 | self.readInt8() << 0
     
     def writeInt32(self, data):
-        self.writeInt8((data >> 24) & 0xFF)
-        self.writeInt8((data >> 16) & 0xFF)
-        self.writeInt8((data >> 8) & 0xFF)
-        self.writeInt8((data >> 0) & 0xFF)
+        self.write(bytes([(data >> 24) & 0xFF, (data >> 16) & 0xFF, (data >> 8) & 0xFF, (data >> 0) & 0xFF]))
         return self
     
     def readInt32(self):
@@ -103,6 +97,9 @@ class Buffer:
         return self.length() > 0
 
     def toString(self):
+        return self.buffer.decode('utf-8')
+    
+    def toBytes(self):
         return self.buffer
     
     def clear(self):
