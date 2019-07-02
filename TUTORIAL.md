@@ -104,4 +104,4 @@ Now just run the following command to move the website files to the nginx root.
 
 ### 5 - Profit
 
-If you did everything right, the game should be working now, just open the url: [http://127.0.0.1:8080/royale/index.html](http://127.0.0.1:8080/royale/index.html)
+If you did everything right, the game should be working now, just open the url: [http://127.0.0.1/royale/index.html](http://127.0.0.1/royale/index.html)
