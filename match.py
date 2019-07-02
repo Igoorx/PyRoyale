@@ -3,11 +3,13 @@ from buffer import Buffer
 import random
 
 class Match(object):
-    def __init__(self, server):
+    def __init__(self, server, roomName, private):
         self.server = server
 
         self.world = "lobby"
+        self.roomName = roomName
         self.closed = False
+        self.private = private
         self.playing = False
         self.autoStartTimer = None
         self.startingTimer = None

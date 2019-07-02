@@ -157,7 +157,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.player = Player(self,
                                      packet["name"],
                                      packet["team"],
-                                     self.server.getMatch())
+                                     self.server.getMatch(packet["team"], packet["private"]))
                 self.loginSuccess()
                 self.server.players.append(self.player)
                 
@@ -424,17 +424,17 @@ class MyServerFactory(WebSocketServerFactory):
         protocol.factory = self
         return protocol
 
-    def getMatch(self):
+    def getMatch(self, roomName, private):
         fmatch = None
         for match in self.matches:
-            if not match.closed and len(match.players) < self.playerCap:
+            if not match.closed and len(match.players) < self.playerCap and private == match.private and (not private or match.roomName == roomName):
                 if not self.allowLateEnter and match.playing:
                     continue
                 fmatch = match
                 break
 
         if fmatch == None:
-            fmatch = Match(self)
+            fmatch = Match(self, roomName, private)
             self.matches.append(fmatch)
 
         return fmatch
