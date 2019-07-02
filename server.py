@@ -15,7 +15,7 @@ import json
 import random
 import hashlib
 import traceback
-import ConfigParser
+import configparser
 from buffer import Buffer
 from player import Player
 from match import Match
@@ -26,7 +26,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         self.server = server
         self.address = str()
-        self.recv = str()
+        self.recv = bytes()
 
         self.pendingStat = None
         self.stat = str()
@@ -86,14 +86,15 @@ class MyServerProtocol(WebSocketServerProtocol):
         except Exception as e:
             traceback.print_exc()
             self.transport.loseConnection()
-            self.recv = str()
+            self.recv = bytes()
             return
 
     def sendJSON(self, j):
-        self.sendMessage(json.dumps(j), False)
+        self.sendMessage(json.dumps(j).encode('utf-8'), False)
 
     def sendBin(self, code, buff):
-        self.sendMessage(Buffer().writeInt8(code).write(buff.toString() if isinstance(buff, Buffer) else buff).toString(), True)
+        msg=Buffer().writeInt8(code).write(buff.toBytes() if isinstance(buff, Buffer) else buff).toBytes()
+        self.sendMessage(msg, True)
 
     def loginSuccess(self):
         self.sendJSON({"packets": [
@@ -114,7 +115,7 @@ class MyServerProtocol(WebSocketServerProtocol):
     def block(self, reason):
         if self.blocked:
             return
-        print "Player blocked: {0}".format(self.player.name)
+        print("Player blocked: {0}".format(self.player.name))
         self.blocked = True
         if not self.player.dead:
             self.player.match.broadBin(0x11, Buffer().writeInt16(self.player.id), self.player.id) # KILL_PLAYER_OBJECT
@@ -185,10 +186,10 @@ class MyServerProtocol(WebSocketServerProtocol):
     def onBinaryMessage(self):
         pktLenDict = { 0x10: 6, 0x11: 0, 0x12: 12, 0x13: 1, 0x17: 2, 0x18: 4, 0x19: 0, 0x20: 7, 0x30: 7 }
         
-        code = ord(self.recv[0])
+        code = self.recv[0]
         if code not in pktLenDict:
             #print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
-            self.recv = str()
+            self.recv = bytes()
             return False
             
         pktLen = pktLenDict[code] + 1
@@ -200,7 +201,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         b = Buffer(pktData)
         
         if not self.player.loaded or self.blocked or (not self.player.match.closed and self.player.match.playing):
-            self.recv = str()
+            self.recv = bytes()
             return False
         
         if code == 0x10: # CREATE_PLAYER_OBJECT
@@ -300,7 +301,7 @@ class MyServerProtocol(WebSocketServerProtocol):
             
         else:
             print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
-            self.recv = str()
+            self.recv = bytes()
             return False
 
         return True
@@ -309,7 +310,7 @@ class MyServerFactory(WebSocketServerFactory):
     def __init__(self, url):
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                "server.cfg"), "r") as f:
-            self.configHash = hashlib.md5(f.read()).hexdigest()
+            self.configHash = hashlib.md5(f.read().encode('utf-8')).hexdigest()
         self.readConfig(self.configHash)
         
         WebSocketServerFactory.__init__(self, url.format(self.listenPort))
@@ -340,7 +341,7 @@ class MyServerFactory(WebSocketServerFactory):
     def readConfig(self, cfgHash):
         self.configHash = cfgHash
             
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read('server.cfg')
 
         self.listenPort = config.getint('Server', 'ListenPort')
@@ -360,18 +361,18 @@ class MyServerFactory(WebSocketServerFactory):
     def generalUpdate(self):
         playerCount = len(self.players)
 
-        print "pc: {0}, mc: {1}, mp5s: {2}".format(playerCount, len(self.matches), self.messages)
+        print("pc: {0}, mc: {1}, mp5s: {2}".format(playerCount, len(self.matches), self.messages))
         self.messages = 0
 
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "server.cfg"), "r") as f:
-                cfgHash = hashlib.md5(f.read()).hexdigest()
+                cfgHash = hashlib.md5(f.read().encode('utf-8')).hexdigest()
                 if cfgHash != self.configHash:
                     self.readConfig(cfgHash)
-                    print "Configuration reloaded."
+                    print("Configuration reloaded.")
         except:
-            print "Failed to reload configuration."
+            print("Failed to reload configuration.")
         
         if self.statusPath:
             try:

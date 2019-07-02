@@ -71,18 +71,20 @@ now just run the command `python server.py </dev/null &>/dev/null &` to start th
 ### 3 - Get the website to run
 
 To get the website running, you will need `nginx`, just download it with your OS package manager, in debian or ubuntu you can use apt-get like this:
-`sudo pat-get install nginx`
+`sudo apt-get install nginx`
 
 After the install has completed, open the file `/etc/nginx/sites-available/default` in a Text Editor of your choice. (I recommend VIM)
 
 Find the text `location / {` and above it write the following:
-> location ^~ /royale {
->   if (-e $request_filename.json){
->       rewrite ^/(.*)$ /$1.json;
->   }
-> }
 
-It should look like this:
+```
+ location ^~ /royale {
+   if (-e $request_filename.json){
+       rewrite ^/(.*)$ /$1.json;
+   }
+ }
+```
+
 ![ScreenShot](https://i.imgur.com/jGGZsYY.png)
 
 Now, save the file. To the changes be applied, restart the nginx service, this command should work:
