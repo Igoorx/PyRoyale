@@ -1,4 +1,12 @@
+import os
 import sys
+
+if sys.version_info.major != 3:
+    sys.stderr.write("You need python 3.7 or later to run this script\n")
+    if os.name == 'nt': # Enforce that the window opens in windows
+        print("Press ENTER to exit")
+        input()
+    exit(1)
 
 from twisted.python import log
 log.startLogging(sys.stdout)
@@ -10,7 +18,6 @@ reactor = install_reactor(verbose=False,
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from twisted.internet.protocol import Factory
-import os
 import json
 import random
 import hashlib

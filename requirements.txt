@@ -1,0 +1,30 @@
+################################################################################
+# This requirements file has been automatically generated from `Pipfile` with
+# `pipenv-to-requirements`
+#
+#
+# This has been done to maintain backward compatibility with tools and services
+# that do not support `Pipfile` yet.
+#
+# Do NOT edit it directly, use `pipenv install [-d]` to modify `Pipfile` and
+# `Pipfile.lock` and then regenerate `requirements*.txt`.
+################################################################################
+
+asn1crypto==0.24.0
+attrs==19.1.0
+autobahn==19.6.2
+automat==0.7.0
+cffi==1.12.3
+configparser==3.7.4
+constantly==15.1.0
+cryptography==2.7
+emoji==0.5.2
+hyperlink==19.0.0
+idna==2.8
+incremental==17.5.0
+pycparser==2.19
+pyhamcrest==1.9.0
+six==1.12.0
+twisted==19.2.1
+txaio==18.8.1
+zope.interface==4.6.0
