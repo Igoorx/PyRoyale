@@ -425,6 +425,9 @@ class MyServerFactory(WebSocketServerFactory):
         return protocol
 
     def getMatch(self, roomName, private):
+        if roomName.strip() == "":
+            private = False
+        
         fmatch = None
         for match in self.matches:
             if not match.closed and len(match.players) < self.playerCap and private == match.private and (not private or match.roomName == roomName):
