@@ -119,15 +119,20 @@ class Match(object):
 
         if self.world == "lobby" or not player.lobbier or self.closed:
             for p in self.players:
-                if not p.loaded:
+                if not p.loaded or p == player:
                     continue
                 player.sendBin(0x10, p.serializePlayerObject())
             if self.startTimer != 0 or self.closed:
                 player.setStartTimer(self.startTimer)
         self.broadPlayerList()
 
-        if not self.playing and self.startingTimer is None and len(self.players) >= self.server.playerCap:
-            self.startingTimer = reactor.callLater(3, self.start, True)
+        if not self.playing:
+            if self.startingTimer is None and len(self.players) >= self.server.playerCap:
+                self.startingTimer = reactor.callLater(3, self.start, True)
+            # This is needed because if the votes where sufficient to start but there wasn't sufficient players,
+            # when someone enters the game, it can make it possible to start the game.
+            elif self.server.enableVoteStart and self.votes >= len(self.players) * self.server.voteRateToStart:
+                self.startingTimer = reactor.callLater(3, self.start, True)
 
     def voteStart(self):
         self.votes += 1

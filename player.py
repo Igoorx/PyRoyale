@@ -10,12 +10,12 @@ class Player(object):
         self.match = match
         
         self.name = ' '.join(emoji.emojize(re.sub(r"[^\x00-\x7F]+", "", emoji.demojize(name)).strip())[:20].split()).upper()
-        if self.server.checkCurse(self.name):
+        self.team = team[:3].strip().upper()
+        if len(self.team) > 0 and self.server.checkCurse(self.name): # Don't filter players out of squads
             self.name = str()
         if len(self.name) == 0:
             self.name = self.server.defaultName
-        self.team = team[:3].upper()
-        if self.team.strip() == "":
+        if len(self.team) == 0:
             self.team = self.server.defaultTeam
         self.pendingWorld = None
         self.level = int()

@@ -247,7 +247,8 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.player.posX = pos[0]
             self.player.posY = pos[1]
 
-            if ((self.player.posX < 23 or self.player.posY >= 58.5) or sprite > 5) and self.player.match.world == "lobby" and zone == 0:
+            if ((#self.player.posX < 23 or
+                 self.player.posY >= 58.5) or sprite > 5) and self.player.match.world == "lobby" and zone == 0:
                 self.block(0x1)
                 return
             
