@@ -46,6 +46,16 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         self.dcTimer = None
 
+    def startDCTimer(self, time):
+        self.stopDCTimer()
+        self.dcTimer = reactor.callLater(time, self.transport.loseConnection)
+
+    def stopDCTimer(self):
+        try:
+            self.dcTimer.cancel()
+        except:
+            pass
+
     def onConnect(self, request):
         #print("Client connecting: {0}".format(request.peer))
 
@@ -58,16 +68,13 @@ class MyServerProtocol(WebSocketServerProtocol):
         if not self.address:
             self.address = self.transport.getPeer().host
  
-        self.dcTimer = reactor.callLater(25, self.transport.loseConnection)
+        self.startDCTimer(25)
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
         #print("WebSocket connection closed: {0}".format(reason))
         
-        try:
-            self.dcTimer.cancel()
-        except:
-            pass
+        self.stopDCTimer()
 
         if self.stat == "g" and self.player != None:
             self.server.players.remove(self.player)
@@ -140,10 +147,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                     return
                 self.pendingStat = None
                 
-                try:
-                    self.dcTimer.cancel()
-                except:
-                    pass
+                self.stopDCTimer()
 
                 if self.address != "127.0.0.1" and self.server.getPlayerCountByAddress(self.address) >= self.server.maxSimulIP:
                     self.exception("Too many connections")

@@ -47,7 +47,7 @@ class Player(object):
         self.sendJSON({"packets": [
             {"game": worldName, "type": "g01"}
         ], "type": "s01"})
-        self.client.dcTimer = reactor.callLater(15, self.client.transport.loseConnection)
+        self.client.startDCTimer(15)
 
     def setStartTimer(self, time):
         self.sendJSON({"packets": [
@@ -67,10 +67,7 @@ class Player(object):
         if self.loaded or self.pendingWorld is None:
             return
 
-        try:
-            self.client.dcTimer.cancel()
-        except:
-            pass
+        self.client.stopDCTimer()
         
         self.level = 0
         self.zone = 0
@@ -96,10 +93,7 @@ class Player(object):
             if wasDead:
                 self.match.broadPlayerList()
             
-            try:
-                self.dcTimer.cancel()
-            except:
-                pass
+            self.client.stopDCTimer()
             
             self.match.broadBin(0x10, Buffer().writeInt16(self.id).write(pktData))
 
@@ -108,7 +102,7 @@ class Player(object):
                 return
             
             self.dead = True
-            self.dcTimer = reactor.callLater(15, self.client.transport.loseConnection)
+            self.client.startDCTimer(15)
             
             self.match.broadBin(0x11, Buffer().writeInt16(self.id))
             
@@ -157,7 +151,7 @@ class Player(object):
                 return
 
             self.win = True
-            self.dcTimer = reactor.callLater(120, self.client.transport.loseConnection)
+            self.startDCTimer(120)
             
             self.match.broadBin(0x18, Buffer().writeInt16(self.id).writeInt8(self.match.getWinners()).writeInt8(0))
             
