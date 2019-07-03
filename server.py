@@ -161,7 +161,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.player = Player(self,
                                      packet["name"],
                                      team,
-                                     self.server.getMatch(team, packet["private"]))
+                                     self.server.getMatch(team, packet["private"] if "private" in packet else False))
                 self.loginSuccess()
                 self.server.players.append(self.player)
                 
