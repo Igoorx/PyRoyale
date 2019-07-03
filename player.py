@@ -84,4 +84,105 @@ class Player(object):
         self.sendBin(0x02, Buffer().writeInt16(self.id)) # ASSIGN_PID
 
         self.match.onPlayerReady(self)
-        
+
+    def handlePkt(self, code, b, pktData):
+        if code == 0x10: # CREATE_PLAYER_OBJECT
+            level, zone, pos = b.readInt8(), b.readInt8(), b.readShor2()
+            self.level = level
+            self.zone = zone
+            
+            wasDead = self.dead
+            self.dead = False
+            if wasDead:
+                self.match.broadPlayerList()
+            
+            try:
+                self.dcTimer.cancel()
+            except:
+                pass
+            
+            self.match.broadBin(0x10, Buffer().writeInt16(self.id).write(pktData))
+
+        elif code == 0x11: # KILL_PLAYER_OBJECT
+            if self.dead:
+                return
+            
+            self.dead = True
+            self.dcTimer = reactor.callLater(15, self.client.transport.loseConnection)
+            
+            self.match.broadBin(0x11, Buffer().writeInt16(self.id))
+            
+        elif code == 0x12: # UPDATE_PLAYER_OBJECT
+            if self.dead:
+                return
+
+            level, zone, pos, sprite, reverse = b.readInt8(), b.readInt8(), b.readVec2(), b.readInt8(), b.readBool()
+            self.level = level
+            self.zone = zone
+            self.posX = pos[0]
+            self.posY = pos[1]
+
+            if ((#self.posX < 23 or
+                 self.posY >= 58.5) or sprite > 5) and self.match.world == "lobby" and zone == 0:
+                self.block(0x1)
+                return
+            
+            self.match.broadBin(0x12, Buffer().writeInt16(self.id).write(pktData))
+            
+        elif code == 0x13: # PLAYER_OBJECT_EVENT
+            if self.dead:
+                return
+
+            type = b.readInt8()
+
+            if self.match.world == "lobby":
+                self.block(0x2)
+                return
+            
+            self.match.broadBin(0x13, Buffer().writeInt16(self.id).write(pktData))
+
+        elif code == 0x17:
+            killer = b.readInt16()
+            if self.id == killer:
+                return
+            
+            killer = self.match.getPlayer(killer)
+            if killer is None:
+                return
+
+            killer.sendBin(0x17, Buffer().writeInt16(self.id).write(pktData))
+
+        elif code == 0x18: # PLAYER_RESULT_REQUEST
+            if self.dead or self.win:
+                return
+
+            self.win = True
+            self.dcTimer = reactor.callLater(120, self.client.transport.loseConnection)
+            
+            self.match.broadBin(0x18, Buffer().writeInt16(self.id).writeInt8(self.match.getWinners()).writeInt8(0))
+            
+        elif code == 0x19:
+            self.trustCount += 1
+            if self.trustCount > 8:
+                self.block(0x3)
+
+        elif code == 0x20: # OBJECT_EVENT_TRIGGER
+            if self.dead:
+                return
+
+            level, zone, oid, type = b.readInt8(), b.readInt8(), b.readInt32(), b.readInt8()
+            print(level, zone, oid, type)
+
+            if self.match.world == "lobby" and oid == 458761:
+                self.match.goldFlowerTaken = True
+
+            self.match.broadBin(0x20, Buffer().writeInt16(self.id).write(pktData))
+            
+        elif code == 0x30: # TILE_EVENT_TRIGGER
+            if self.dead:
+                return
+
+            level, zone, pos, type = b.readInt8(), b.readInt8(), b.readShor2(), b.readInt8()
+
+            self.match.broadBin(0x30, Buffer().writeInt16(self.id).write(pktData))
+

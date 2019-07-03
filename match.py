@@ -19,6 +19,8 @@ class Match(object):
         self.lastId = -1
         self.players = list()
 
+        self.goldFlowerTaken = bool()
+
     def getNextPlayerId(self):
         self.lastId += 1
         return self.lastId
@@ -118,6 +120,9 @@ class Match(object):
             except:
                 pass
             self.autoStartTimer = reactor.callLater(30, self.start, True)
+
+        if self.world == "lobby" and self.goldFlowerTaken:
+            self.broadBin(0x20, Buffer().writeInt16(-1).writeInt8(0).writeInt8(0).writeInt32(458761).writeInt8(0))
 
         if self.world == "lobby" or not player.lobbier or self.closed:
             for p in self.players:
