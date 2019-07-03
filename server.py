@@ -153,11 +153,15 @@ class MyServerProtocol(WebSocketServerProtocol):
                 for b in self.server.blocked:
                     if b[0] == self.address:
                         self.blocked = True
+
+                team = packet["team"][:3].strip().upper()
+                if len(team) == 0:
+                    team = self.server.defaultTeam
                 
                 self.player = Player(self,
                                      packet["name"],
-                                     packet["team"],
-                                     self.server.getMatch(packet["team"], packet["private"]))
+                                     team,
+                                     self.server.getMatch(team, packet["private"]))
                 self.loginSuccess()
                 self.server.players.append(self.player)
                 
@@ -425,7 +429,7 @@ class MyServerFactory(WebSocketServerFactory):
         return protocol
 
     def getMatch(self, roomName, private):
-        if roomName.strip() == "":
+        if roomName == "":
             private = False
         
         fmatch = None
