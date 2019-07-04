@@ -164,7 +164,6 @@ class Player(object):
                 return
 
             level, zone, oid, type = b.readInt8(), b.readInt8(), b.readInt32(), b.readInt8()
-            print(level, zone, oid, type)
 
             if self.match.world == "lobby" and oid == 458761:
                 self.match.goldFlowerTaken = True
