@@ -116,10 +116,9 @@ class Player(object):
             self.posX = pos[0]
             self.posY = pos[1]
 
-            if ((#self.posX < 23 or
-                 self.posY >= 58.5) or sprite > 5) and self.match.world == "lobby" and zone == 0:
-                self.block(0x1)
-                return
+            #if ((self.posX < 23 or self.posY >= 58.5) or sprite > 5) and self.match.world == "lobby" and zone == 0:
+            #    self.block(0x1)
+            #    return
             
             self.match.broadBin(0x12, Buffer().writeInt16(self.id).write(pktData))
             
