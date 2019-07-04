@@ -38,11 +38,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.pendingStat = None
         self.stat = str()
         self.player = None
-        self.trustCount = int()
         self.blocked = bool()
-
-        self.lastX = int()
-        self.lastXOk = True
 
         self.dcTimer = None
 
@@ -184,7 +180,6 @@ class MyServerProtocol(WebSocketServerProtocol):
                 if self.player is None:
                     self.transport.loseConnection()
                     return
-                self.lastXOk = True
                 self.player.onLoadComplete()
 
             elif type == "g50": # Vote to start

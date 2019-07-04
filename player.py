@@ -25,6 +25,10 @@ class Player(object):
         self.voted = bool()
         self.loaded = bool()
         self.lobbier = bool()
+
+        self.trustCount = int()
+        self.lastX = int()
+        self.lastXOk = True
         
         self.id = match.addPlayer(self)
 
@@ -77,6 +81,7 @@ class Player(object):
         self.dead = False
         self.loaded = True
         self.pendingWorld = None
+        self.lastXOk = True
         
         self.sendBin(0x02, Buffer().writeInt16(self.id)) # ASSIGN_PID
 
@@ -116,9 +121,9 @@ class Player(object):
             self.posX = pos[0]
             self.posY = pos[1]
 
-            #if ((self.posX < 23 or self.posY >= 58.5) or sprite > 5) and self.match.world == "lobby" and zone == 0:
-            #    self.block(0x1)
-            #    return
+            if sprite > 5 and self.match.world == "lobby" and zone == 0:
+                self.client.block(0x1)
+                return
             
             self.match.broadBin(0x12, Buffer().writeInt16(self.id).write(pktData))
             
@@ -129,7 +134,7 @@ class Player(object):
             type = b.readInt8()
 
             if self.match.world == "lobby":
-                self.block(0x2)
+                self.client.block(0x2)
                 return
             
             self.match.broadBin(0x13, Buffer().writeInt16(self.id).write(pktData))
@@ -157,7 +162,7 @@ class Player(object):
         elif code == 0x19:
             self.trustCount += 1
             if self.trustCount > 8:
-                self.block(0x3)
+                self.client.block(0x3)
 
         elif code == 0x20: # OBJECT_EVENT_TRIGGER
             if self.dead:
