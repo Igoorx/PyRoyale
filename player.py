@@ -150,7 +150,7 @@ class Player(object):
                 return
 
             self.win = True
-            self.startDCTimer(120)
+            self.client.startDCTimer(120)
             
             self.match.broadBin(0x18, Buffer().writeInt16(self.id).writeInt8(self.match.getWinners()).writeInt8(0))
             
