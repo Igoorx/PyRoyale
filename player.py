@@ -107,7 +107,7 @@ class Player(object):
                 return
             
             self.dead = True
-            self.client.startDCTimer(15)
+            self.client.startDCTimer(60)
             
             self.match.broadBin(0x11, Buffer().writeInt16(self.id))
             
