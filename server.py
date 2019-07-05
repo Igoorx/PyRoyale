@@ -100,15 +100,17 @@ class MyServerProtocol(WebSocketServerProtocol):
             return
 
     def sendJSON(self, j):
+        #print("sendJSON: "+str(j))
         self.sendMessage(json.dumps(j).encode('utf-8'), False)
 
     def sendBin(self, code, buff):
         msg=Buffer().writeInt8(code).write(buff.toBytes() if isinstance(buff, Buffer) else buff).toBytes()
+        #print("sendBin: "+str(code)+" "+str(msg))
         self.sendMessage(msg, True)
 
     def loginSuccess(self):
         self.sendJSON({"packets": [
-            {"name": self.player.name, "team": self.player.team, "sid": "i-dont-know-for-what-this-is-used", "type": "l01"}
+            {"name": self.player.name, "team": self.player.team, "sid": "i-dont-know-for-what-this-is-used", "type": "l01", "skin": self.player.skin}
         ], "type": "s01"})
     
     def setState(self, state):
@@ -157,11 +159,12 @@ class MyServerProtocol(WebSocketServerProtocol):
                 team = packet["team"][:3].strip().upper()
                 if len(team) == 0:
                     team = self.server.defaultTeam
-                
+                skin = packet["skin"] if "skin" in packet else 0
                 self.player = Player(self,
                                      packet["name"],
                                      team,
-                                     self.server.getMatch(team, packet["private"] if "private" in packet else False))
+                                     self.server.getMatch(team, packet["private"] if "private" in packet else False),
+                                     skin)
                 self.loginSuccess()
                 self.server.players.append(self.player)
                 

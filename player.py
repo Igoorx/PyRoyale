@@ -4,10 +4,11 @@ from twisted.internet import reactor
 from buffer import Buffer
 
 class Player(object):
-    def __init__(self, client, name, team, match):
+    def __init__(self, client, name, team, match, skin):
         self.client = client
         self.server = client.server
         self.match = match
+        self.skin = skin
         
         self.name = ' '.join(emoji.emojize(re.sub(r"[^\x00-\x7F]+", "", emoji.demojize(name)).strip())[:20].split()).upper()
         self.team = team
@@ -42,7 +43,7 @@ class Player(object):
         return {"id": self.id, "name": self.name, "team": self.team}
 
     def serializePlayerObject(self):
-        return Buffer().writeInt16(self.id).writeInt8(self.level).writeInt8(self.zone).writeShor2(self.posX, self.posY).toBytes()
+        return Buffer().writeInt16(self.id).writeInt8(self.level).writeInt8(self.zone).writeShor2(self.posX, self.posY).writeInt16(self.skin).toBytes()
 
     def loadWorld(self, worldName):
         self.dead = True
@@ -83,7 +84,7 @@ class Player(object):
         self.pendingWorld = None
         self.lastXOk = True
         
-        self.sendBin(0x02, Buffer().writeInt16(self.id)) # ASSIGN_PID
+        self.sendBin(0x02, Buffer().writeInt16(self.id).writeInt16(self.skin)) # ASSIGN_PID
 
         self.match.onPlayerReady(self)
 
@@ -100,7 +101,7 @@ class Player(object):
             
             self.client.stopDCTimer()
             
-            self.match.broadBin(0x10, Buffer().writeInt16(self.id).write(pktData))
+            self.match.broadBin(0x10, Buffer().writeInt16(self.id).write(pktData).writeInt16(self.skin))
 
         elif code == 0x11: # KILL_PLAYER_OBJECT
             if self.dead:
