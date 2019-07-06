@@ -16,6 +16,7 @@ This project uses Python <b>3.7</b> and the following dependencies:
 - AutoBahn
 - Emoji
 - ConfigParser
+- jsonschema
 
 <b>If you are on Windows, the module <u>pypiwin32</u> may also be required.</b> 
 

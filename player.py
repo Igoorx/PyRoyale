@@ -45,13 +45,14 @@ class Player(object):
     def serializePlayerObject(self):
         return Buffer().writeInt16(self.id).writeInt8(self.level).writeInt8(self.zone).writeShor2(self.posX, self.posY).writeInt16(self.skin).toBytes()
 
-    def loadWorld(self, worldName):
+    def loadWorld(self, worldName, levelData):
         self.dead = True
         self.loaded = False
         self.pendingWorld = worldName
-        self.sendJSON({"packets": [
-            {"game": worldName, "type": "g01"}
-        ], "type": "s01"})
+        msg = {"game": worldName, "type": "g01"}
+        if worldName == "custom":
+            msg["levelData"] = levelData
+        self.sendJSON({"packets": [msg], "type": "s01"})
         self.client.startDCTimer(15)
 
     def setStartTimer(self, time):
@@ -66,7 +67,7 @@ class Player(object):
         if self.match.world == "lobby":
             self.lobbier = True
             
-        self.loadWorld(self.match.world)
+        self.loadWorld(self.match.world, self.match.customLevelData)
 
     def onLoadComplete(self):
         if self.loaded or self.pendingWorld is None:

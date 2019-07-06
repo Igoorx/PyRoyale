@@ -1,0 +1,78 @@
+{ "type" : "object",
+  "properties" : {
+    "type" : {"type" : "string", "pattern" : "^game$"},
+    "resource" : {
+        "type" : "array",
+        "items" : {
+            "type" : "object",
+            "properties" : {
+                "id" : {"type":"string", "minLength" : 1},
+                "src" : {"type":"string", "minLength" : 1}
+            },
+            "required" : ["id", "src"]
+        }
+    },
+    "initial" : { "type" : "integer" },
+    "world" : {
+        "type" : "array",
+        "minItems" : 1,
+        "items" : {
+            "type" : "object",
+            "properties" : {
+                "id" : { "type" : "integer" },
+                "name" : { "type" : "string", "minLength" : 1},
+                "initial" : { "type" : "integer" },
+                "zone" : {
+                    "type" : "array",
+                    "minItems" : 1,
+                    "items" : {
+                        "type": "object",
+                        "properties" : {
+                            "id" : { "type" : "integer" },
+                            "initial" : { "type" : "integer" },
+                            "color" : { "type" : "string", "pattern" : "#[0-9a-fA-F]{6}" },
+                            "music" : { "type" : "string", "minLength" : 1},
+                            "data" : {
+                                "type" : "array",
+                                "minItems" : 1,
+                                "items" : {
+                                    "type" : "array",
+                                    "minItems" : 1,
+                                    "items" : {"type" : "integer"}
+                                }
+                            },
+                            "obj" : {
+                                "type" : "array",
+                                "items" : {
+                                    "type" : "object",
+                                    "properties" : {
+                                        "type" : {"type" : "integer"},
+                                        "pos" : {"type" : "integer"},
+                                        "param" : {"type" : "array"}
+                                    },
+                                    "required" : ["type", "pos", "param"]
+                                }
+                            },
+                            "warp" : {
+                                "type" : "array",
+                                "items" : {
+                                    "type" : "object",
+                                    "properties" : {
+                                        "id" : {"type" : "integer"},
+                                        "pos" : {"type" : "integer"},
+                                        "data" : {"type" : "integer"}
+                                    },
+                                    "required" : ["id", "pos", "data"]
+                                }
+                            }
+                        },
+                        "required" : ["id", "initial", "color", "music", "data", "obj", "warp"]
+                    }
+                }
+            },
+            "required": ["id", "name", "initial", "zone"]
+        }
+    }
+  },
+  "required": ["type", "resource", "initial", "world"]
+}

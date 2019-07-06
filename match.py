@@ -1,11 +1,23 @@
 from twisted.internet import reactor
 from buffer import Buffer
 import random
+import json
+import os
+import jsonschema
+
+autoMatchStartTime = 30
+
+levelJsonSchema = json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "levelSchema.json"), "r").read())
+level = json.loads(open("D:\\Projects\\github\\MarioRoyale\\game\\world-1.json").read())
+#level = json.loads(open("D:\\Projects\\github\\MarioRoyale\\game\\lobby.json").read())
+jsonschema.validate(instance=level, schema=levelJsonSchema)
 
 class Match(object):
     def __init__(self, server, roomName, private):
         self.server = server
 
+        self.forceLevel = ""
+        self.customLevelData = ""
         self.world = "lobby"
         self.roomName = roomName
         self.closed = False
@@ -81,7 +93,7 @@ class Match(object):
 
     def broadLoadWorld(self):
         for player in self.players:
-            player.loadWorld(self.world)
+            player.loadWorld(self.world, self.customLevelData)
 
     def broadStartTimer(self, time):
         self.startTimer = time * 30
@@ -114,12 +126,13 @@ class Match(object):
         return playersData
 
     def onPlayerReady(self, player):
-        if not self.playing: # Ensure that the game starts even with fewer players
-            try:
-                self.autoStartTimer.cancel()
-            except:
-                pass
-            self.autoStartTimer = reactor.callLater(30, self.start, True)
+        if not self.private:
+            if not self.playing: # Ensure that the game starts even with fewer players
+                try:
+                    self.autoStartTimer.cancel()
+                except:
+                    pass
+                self.autoStartTimer = reactor.callLater(autoMatchStartTime, self.start, True)
 
         if self.world == "lobby" and self.goldFlowerTaken:
             self.broadBin(0x20, Buffer().writeInt16(-1).writeInt8(0).writeInt8(0).writeInt32(458761).writeInt8(0))
@@ -161,8 +174,31 @@ class Match(object):
         except:
             pass
         
-        self.world = random.choice(self.server.worlds)
+        self.world = self.forceLevel if self.forceLevel != "" else random.choice(self.server.worlds)
         self.broadLoadWorld()
 
         reactor.callLater(1, self.broadStartTimer, self.server.startTimer)
-        
+
+    def validateCustomLevel(self, level):
+        lk = json.loads(level)
+        jsonschema.validate(instance=lk, schema=levelJsonSchema)
+
+    def selectLevel(self, level):
+        if not self.private:
+            return
+        if level == "" or level in self.server.worlds:
+            self.forceLevel = level
+            self.broadLevelSelect()
+
+    def broadLevelSelect(self):
+        for player in self.players:
+            player.sendJSON({"type":"gsl", "name":self.forceLevel, "status":"update", "message":""})
+
+
+    def selectCustomLevel(self, level):
+        if not self.private:
+            return
+        self.validateCustomLevel(level)
+        self.forceLevel = "custom"
+        self.customLevelData = level
+        self.broadLevelSelect()
