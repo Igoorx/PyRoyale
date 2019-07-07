@@ -195,20 +195,24 @@ class MyServerProtocol(WebSocketServerProtocol):
             elif type == "g51": # (SPECIAL) Force start
                 if self.server.mcode and self.server.mcode in packet["code"]:
                     self.player.match.start(True)
-            elif type == "gsl":  #level select
-                if self.player is not None:
-                    levelName = packet["name"]
-                    if levelName == "custom":
-                        try:
-                            self.player.match.selectCustomLevel(packet["data"])
-                        except Exception as e:
-                            estr = str(e)
-                            estr = "\n".join(estr.split("\n")[:10])
-                            self.sendJSON({"type":"gsl", "name":levelName, "status":"error", "message":estr})
-                            return
-                        self.sendJSON({"type":"gsl", "name":levelName, "status":"success", "message":""})
-                    else:
-                        self.player.match.selectLevel(levelName)
+            
+            elif type == "gsl":  # Level select
+                if self.player is None:
+                    return
+                
+                levelName = packet["name"]
+                if levelName == "custom":
+                    try:
+                        self.player.match.selectCustomLevel(packet["data"])
+                    except Exception as e:
+                        estr = str(e)
+                        estr = "\n".join(estr.split("\n")[:10])
+                        self.sendJSON({"type":"gsl","name":levelName,"status":"error","message":estr})
+                        return
+                    
+                    self.sendJSON({"type":"gsl","name":levelName,"status":"success","message":""})
+                else:
+                    self.player.match.selectLevel(levelName)
 
     def onBinaryMessage(self):
         pktLenDict = { 0x10: 6, 0x11: 0, 0x12: 12, 0x13: 1, 0x17: 2, 0x18: 4, 0x19: 0, 0x20: 7, 0x30: 7 }
