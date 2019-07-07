@@ -1,16 +1,9 @@
 from twisted.internet import reactor
 from buffer import Buffer
-import random
-import json
 import os
+import json
+import random
 import jsonschema
-
-autoMatchStartTime = 30
-
-levelJsonSchema = json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "levelSchema.json"), "r").read())
-level = json.loads(open("D:\\Projects\\github\\MarioRoyale\\game\\world-1.json").read())
-#level = json.loads(open("D:\\Projects\\github\\MarioRoyale\\game\\lobby.json").read())
-jsonschema.validate(instance=level, schema=levelJsonSchema)
 
 class Match(object):
     def __init__(self, server, roomName, private):
@@ -126,13 +119,12 @@ class Match(object):
         return playersData
 
     def onPlayerReady(self, player):
-        if not self.private:
-            if not self.playing: # Ensure that the game starts even with fewer players
-                try:
-                    self.autoStartTimer.cancel()
-                except:
-                    pass
-                self.autoStartTimer = reactor.callLater(autoMatchStartTime, self.start, True)
+        if not self.private and not self.playing: # Ensure that the game starts even with fewer players
+            try:
+                self.autoStartTimer.cancel()
+            except:
+                pass
+            self.autoStartTimer = reactor.callLater(30, self.start, True)
 
         if self.world == "lobby" and self.goldFlowerTaken:
             self.broadBin(0x20, Buffer().writeInt16(-1).writeInt8(0).writeInt8(0).writeInt32(458761).writeInt8(0))
@@ -160,7 +152,7 @@ class Match(object):
             self.start()
 
     def start(self, forced = False):
-        if self.playing or (not forced and len(self.players) < self.server.playerMin): # We need at-least 10 players to start
+        if self.playing or (not forced and len(self.players) < (1 if self.private else self.server.playerMin)): # We need at-least 10 players to start
             return
         self.playing = True
         
@@ -193,7 +185,6 @@ class Match(object):
     def broadLevelSelect(self):
         for player in self.players:
             player.sendJSON({"type":"gsl", "name":self.forceLevel, "status":"update", "message":""})
-
 
     def selectCustomLevel(self, level):
         if not self.private:
