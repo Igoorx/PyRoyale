@@ -1,8 +1,8 @@
 import struct
 
 class Buffer:
-    def __init__(self, data=bytes()):
-        self.buffer = data
+    def __init__(self, data=None):
+        self.buffer = data if data is not None else bytearray()
     
     def write(self, data):
         self.buffer += data
@@ -10,7 +10,7 @@ class Buffer:
     
     def read(self, length=1):
         data = self.buffer[:length]
-        self.buffer = self.buffer[length:]
+        del self.buffer[:length]
         return data
     
     def writeInt8(self, data):
@@ -18,7 +18,7 @@ class Buffer:
         return self
     
     def readInt8(self):
-        return ord(self.read())
+        return self.buffer.pop(0)
     
     def writeInt16(self, data):
         self.write(bytes([(data >> 8) & 0xFF, (data >> 0) & 0xFF]))
@@ -42,15 +42,14 @@ class Buffer:
         return self.readInt8() << 24 | self.readInt8() << 16 | self.readInt8() << 8 | self.readInt8() << 0
 
     def writeBool(self, data):
-        self.write(chr(1 if data else 0))
+        self.write(bytes([1 if data else 0]))
         return self
     
     def readBool(self):
-        return ord(self.read()) == 1
+        return self.buffer.pop(0) == 1
     
     def readFloat(self):
-        data = struct.unpack("!f", self.buffer[:4])[0]
-        self.buffer = self.buffer[4:]
+        data = struct.unpack("!f", self.read(4))[0]
         return data
 
     def writeFloat(self, data):
@@ -58,8 +57,7 @@ class Buffer:
         return self
 
     def readShor2(self):
-        data = struct.unpack("<hh", self.buffer[:4][::-1])
-        self.buffer = self.buffer[4:]
+        data = struct.unpack("<hh", self.read(4)[::-1])
         return data
 
     def writeShor2(self, _1, _2):
@@ -67,8 +65,7 @@ class Buffer:
         return self
 
     def readVec2(self):
-        data = struct.unpack("!ff", self.buffer[:8])
-        self.buffer = self.buffer[8:]
+        data = struct.unpack("!ff", self.read(8))
         return data
 
     def writeVec2(self, _1, _2):
@@ -100,7 +97,7 @@ class Buffer:
         return self.buffer.decode('utf-8')
     
     def toBytes(self):
-        return self.buffer
+        return bytes(self.buffer)
     
     def clear(self):
         self.buffer = ""

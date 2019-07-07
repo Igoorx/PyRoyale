@@ -33,7 +33,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         self.server = server
         self.address = str()
-        self.recv = bytes()
+        self.recv = bytearray()
 
         self.pendingStat = None
         self.stat = str()
@@ -90,13 +90,14 @@ class MyServerProtocol(WebSocketServerProtocol):
             if isBinary:
                 self.recv += payload
                 while len(self.recv) > 0:
-                    self.onBinaryMessage()
+                    if not self.onBinaryMessage():
+                        break
             else:
                 self.onTextMessage(payload.decode('utf8'))
         except Exception as e:
             traceback.print_exc()
             self.transport.loseConnection()
-            self.recv = bytes()
+            self.recv.clear()
             return
 
     def sendJSON(self, j):
@@ -216,26 +217,25 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def onBinaryMessage(self):
         pktLenDict = { 0x10: 6, 0x11: 0, 0x12: 12, 0x13: 1, 0x17: 2, 0x18: 4, 0x19: 0, 0x20: 7, 0x30: 7 }
-        
+
         code = self.recv[0]
         if code not in pktLenDict:
             #print("Unknown binary message received: {1} = {0}".format(repr(self.recv[1:]), hex(code)))
-            self.recv = bytes()
+            self.recv.clear()
             return False
             
         pktLen = pktLenDict[code] + 1
         if len(self.recv) < pktLen:
             return False
         
-        pktData = self.recv[1:pktLen]
-        self.recv = self.recv[pktLen:]
-        b = Buffer(pktData)
+        b = Buffer(self.recv[1:pktLen])
+        del self.recv[:pktLen]
         
         if not self.player.loaded or self.blocked or (not self.player.match.closed and self.player.match.playing):
-            self.recv = bytes()
+            self.recv.clear()
             return False
         
-        self.player.handlePkt(code, b, pktData)
+        self.player.handlePkt(code, b, b.toBytes())
         return True
 
 class MyServerFactory(WebSocketServerFactory):
