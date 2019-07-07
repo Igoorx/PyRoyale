@@ -1,6 +1,8 @@
 import os
 import sys
 
+NUM_SKINS = 4   #temporary until shop is implemented
+
 if sys.version_info.major != 3:
     sys.stderr.write("You need python 3.7 or later to run this script\n")
     if os.name == 'nt': # Enforce that the window opens in windows
@@ -160,6 +162,8 @@ class MyServerProtocol(WebSocketServerProtocol):
                 if len(team) == 0:
                     team = self.server.defaultTeam
                 skin = packet["skin"] if "skin" in packet else 0
+                if skin<0 or skin>NUM_SKINS-1:  #once shop is implemented this check should be "does player own this skin"
+                    skin = 0
                 self.player = Player(self,
                                      packet["name"],
                                      team,
