@@ -1,11 +1,16 @@
 from twisted.internet import reactor
 from buffer import Buffer
+import os
+import json
 import random
+import jsonschema
 
 class Match(object):
     def __init__(self, server, roomName, private):
         self.server = server
 
+        self.forceLevel = ""
+        self.customLevelData = ""
         self.world = "lobby"
         self.roomName = roomName
         self.closed = False
@@ -81,7 +86,7 @@ class Match(object):
 
     def broadLoadWorld(self):
         for player in self.players:
-            player.loadWorld(self.world)
+            player.loadWorld(self.world, self.customLevelData)
 
     def broadStartTimer(self, time):
         self.startTimer = time * 30
@@ -114,7 +119,7 @@ class Match(object):
         return playersData
 
     def onPlayerReady(self, player):
-        if not self.playing: # Ensure that the game starts even with fewer players
+        if not self.private and not self.playing: # Ensure that the game starts even with fewer players
             try:
                 self.autoStartTimer.cancel()
             except:
@@ -147,7 +152,7 @@ class Match(object):
             self.start()
 
     def start(self, forced = False):
-        if self.playing or (not forced and len(self.players) < self.server.playerMin): # We need at-least 10 players to start
+        if self.playing or (not forced and len(self.players) < (1 if self.private else self.server.playerMin)): # We need at-least 10 players to start
             return
         self.playing = True
         
@@ -161,8 +166,30 @@ class Match(object):
         except:
             pass
         
-        self.world = random.choice(self.server.worlds)
+        self.world = self.forceLevel if self.forceLevel != "" else random.choice(self.server.worlds)
         self.broadLoadWorld()
 
         reactor.callLater(1, self.broadStartTimer, self.server.startTimer)
-        
+
+    def validateCustomLevel(self, level):
+        lk = json.loads(level)
+        jsonschema.validate(instance=lk, schema=levelJsonSchema)
+
+    def selectLevel(self, level):
+        if not self.private:
+            return
+        if level == "" or level in self.server.worlds:
+            self.forceLevel = level
+            self.broadLevelSelect()
+
+    def broadLevelSelect(self):
+        for player in self.players:
+            player.sendJSON({"type":"gsl", "name":self.forceLevel, "status":"update", "message":""})
+
+    def selectCustomLevel(self, level):
+        if not self.private:
+            return
+        self.validateCustomLevel(level)
+        self.forceLevel = "custom"
+        self.customLevelData = level
+        self.broadLevelSelect()

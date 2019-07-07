@@ -12,10 +12,11 @@ If you are on Windows and don't want to install python to run this server, you c
 
 ## Dependencies
 This project uses Python <b>3.7</b> and the following dependencies:
-- Twisted
-- AutoBahn
-- Emoji
-- ConfigParser
+- twisted
+- autobahn
+- emoji
+- configparser
+- jsonschema
 
 <b>If you are on Windows, the module <u>pypiwin32</u> may also be required.</b> 
 
