@@ -197,7 +197,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                     self.player.match.start(True)
             
             elif type == "gsl":  # Level select
-                if self.player is None:
+                if self.player is None or self.player.team != "" or not self.player.match.private:
                     return
                 
                 levelName = packet["name"]
@@ -349,8 +349,8 @@ class MyServerFactory(WebSocketServerFactory):
         return protocol
 
     def getMatch(self, roomName, private):
-        if roomName == "":
-            private = False
+        if private and roomName == "":
+            return Match(self, roomName, private)
         
         fmatch = None
         for match in self.matches:

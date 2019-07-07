@@ -5,6 +5,8 @@ import json
 import random
 import jsonschema
 
+levelJsonSchema = json.loads(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "levelSchema.json"), "r").read())
+
 class Match(object):
     def __init__(self, server, roomName, private):
         self.server = server
@@ -176,8 +178,6 @@ class Match(object):
         jsonschema.validate(instance=lk, schema=levelJsonSchema)
 
     def selectLevel(self, level):
-        if not self.private:
-            return
         if level == "" or level in self.server.worlds:
             self.forceLevel = level
             self.broadLevelSelect()
@@ -187,8 +187,6 @@ class Match(object):
             player.sendJSON({"type":"gsl", "name":self.forceLevel, "status":"update", "message":""})
 
     def selectCustomLevel(self, level):
-        if not self.private:
-            return
         self.validateCustomLevel(level)
         self.forceLevel = "custom"
         self.customLevelData = level
