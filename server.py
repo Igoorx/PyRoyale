@@ -128,7 +128,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         ], "type": "s01"})
 
     def block(self, reason):
-        if self.blocked:
+        if self.blocked or len(self.player.match.players) == 1:
             return
         print("Player blocked: {0}".format(self.player.name))
         self.blocked = True
@@ -158,6 +158,8 @@ class MyServerProtocol(WebSocketServerProtocol):
                 for b in self.server.blocked:
                     if b[0] == self.address:
                         self.blocked = True
+                        self.setState("g") # Ingame
+                        return
 
                 team = packet["team"][:3].strip().upper()
                 if len(team) == 0:
@@ -178,6 +180,10 @@ class MyServerProtocol(WebSocketServerProtocol):
         elif self.stat == "g":
             if type == "g00": # Ingame state ready
                 if self.player is None or self.pendingStat is None:
+                    if self.blocked:
+                        self.sendJSON({"packets": [{"game": "jail", "type": "g01"}], "type": "s01"})
+                        return
+                    
                     self.transport.loseConnection()
                     return
                 self.pendingStat = None
@@ -186,6 +192,11 @@ class MyServerProtocol(WebSocketServerProtocol):
 
             elif type == "g03": # World load completed
                 if self.player is None:
+                    if self.blocked:
+                        self.sendBin(0x02, Buffer().writeInt16(0).writeInt16(0))
+                        self.startDCTimer(15)
+                        return
+                    
                     self.transport.loseConnection()
                     return
                 self.player.onLoadComplete()
