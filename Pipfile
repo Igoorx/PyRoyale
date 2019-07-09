@@ -10,6 +10,7 @@ twisted = "*"
 autobahn = "*"
 emoji = "*"
 configparser = "*"
+jsonschema = "*"
 
 [requires]
 python_version = "3.7"
