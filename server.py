@@ -1,5 +1,6 @@
 import os
 import sys
+import datastore
 
 NUM_SKINS = 5   #temporary until shop is implemented
 
@@ -50,6 +51,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.blocked = bool()
 
         self.dcTimer = None
+        self.username = "";
 
     def startDCTimer(self, time):
         self.stopDCTimer()
@@ -183,6 +185,25 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.server.players.append(self.player)
                 
                 self.setState("g") # Ingame
+
+            elif type == "llg":
+                self.stopDCTimer()
+                status, msg = datastore.login(packet["username"], packet["password"])
+                self.sendJSON({"type": "llg", "status": status, "msg": msg})
+                if (status):
+                    self.username = packet["username"]
+
+            elif type == "lrg":
+                self.stopDCTimer()
+                status, msg = datastore.register(packet["username"], packet["password"])
+                self.sendJSON({"type": "lrg", "status": status, "msg": msg})
+                if (status):
+                    self.username = packet["username"]
+
+            elif type == "lpr":
+                if self.username == "":
+                    return
+                datastore.updateAccount(self.username, packet)
 
         elif self.stat == "g":
             if type == "g00": # Ingame state ready
