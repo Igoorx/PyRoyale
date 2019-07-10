@@ -255,10 +255,17 @@ class MyServerProtocol(WebSocketServerProtocol):
 
 class MyServerFactory(WebSocketServerFactory):
     def __init__(self, url):
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               "server.cfg"), "r") as f:
-            self.configHash = hashlib.md5(f.read().encode('utf-8')).hexdigest()
-        self.readConfig(self.configHash)
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "server.cfg"), "r") as f:
+                self.configHash = hashlib.md5(f.read().encode('utf-8')).hexdigest()
+            self.readConfig(self.configHash)
+        except:
+            sys.stderr.write("The file \"server.cfg\" does not exist or is invalid, consider renaming \"server.cfg.example\" to \"server.cfg\".\n")
+            if os.name == 'nt': # Enforce that the window opens in windows
+                print("Press ENTER to exit")
+                input()
+            exit(1)
         
         WebSocketServerFactory.__init__(self, url.format(self.listenPort))
 
