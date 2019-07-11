@@ -343,16 +343,15 @@ class MyServerFactory(WebSocketServerFactory):
         return ''.join(letters)
 
     def checkCurse(self, str):
-        if checkCheckCurse(str):
+        if self.checkCheckCurse(str):
             return True
         str = Leet2(str)
-        if checkCheckCurse(str):
+        if self.checkCheckCurse(str):
             return True
         str = ''.join(e for e in str if e.isalnum())
-        if checkCheckCurse(str):
+        if self.checkCheckCurse(str):
             return True
         return False
-        
 
     def checkCheckCurse(self, str):
         if len(str) <= 3:
