@@ -2,8 +2,10 @@ import os
 import hashlib
 import argon2
 import pickle
+import secrets
 
 accounts = {}
+session = {}
 
 ph = argon2.PasswordHasher()
 
@@ -22,6 +24,10 @@ def persistState():
         pickle.dump(accounts, f)
 
 def register(username, password):
+    if len(username) < 5:
+        return (False, "username too short")
+    if len(password) < 8:
+        return (False, "password too short")
     if username in accounts:
         return (False, "account already registered")
     salt = hashlib.sha256(os.urandom(60)).hexdigest().encode('ascii')
@@ -31,6 +37,9 @@ def register(username, password):
     acc2 = acc.copy()
     del acc2["salt"]
     del acc2["pwdhash"]
+    token = secrets.token_urlsafe(32)
+    acc2["session"] = token
+    session[token] = username
     persistState()
     return (True, acc2)
 
@@ -46,6 +55,23 @@ def login(username, password):
     acc2 = acc.copy()
     del acc2["salt"]
     del acc2["pwdhash"]
+    token = secrets.token_urlsafe(32)
+    acc2["session"] = token
+    session[token] = username
+    return (True, acc2)
+
+def resumeSession(token):
+    if not token in session:
+        return (False, "session expired, please log in")
+    username = session[token]
+    if not username in accounts:
+        return (False, "invalid user name or password")
+    acc = accounts[username]
+    acc2 = acc.copy()
+    del acc2["salt"]
+    del acc2["pwdhash"]
+    acc2["username"] = username
+    acc2["session"] = token
     return (True, acc2)
 
 def updateAccount(username, data):
@@ -59,5 +85,9 @@ def updateAccount(username, data):
     if "skin" in data:
         acc["skin"] = data["skin"]
     persistState()
+
+def logout(token):
+    if token in session:
+        del session[token]
 
 loadState()
