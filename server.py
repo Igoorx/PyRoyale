@@ -306,6 +306,7 @@ class MyServerFactory(WebSocketServerFactory):
         self.maxSimulIP = config.getint('Server', 'MaxSimulIP')
         self.playerMin = config.getint('Match', 'PlayerMin')
         self.playerCap = config.getint('Match', 'PlayerCap')
+        self.autoStartTime = config.getint('Match', 'AutoStartTime')
         self.startTimer = config.getint('Match', 'StartTimer')
         self.enableVoteStart = config.getboolean('Match', 'EnableVoteStart')
         self.voteRateToStart = config.getfloat('Match', 'VoteRateToStart')
