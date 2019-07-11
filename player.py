@@ -12,7 +12,7 @@ class Player(object):
         
         self.name = ' '.join(emoji.emojize(re.sub(r"[^\x00-\x7F]+", "", emoji.demojize(name)).strip())[:20].split()).upper()
         self.team = team
-        if len(self.team) > 0 and self.server.checkCurse(self.name): # Don't filter players out of squads
+        if self.server.checkCurse(self.name):
             self.name = str()
         if len(self.name) == 0:
             self.name = self.server.defaultName

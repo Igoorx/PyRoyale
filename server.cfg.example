@@ -24,7 +24,7 @@ PlayerMin: 2
 # Maximum of players in a match
 PlayerCap: 75
 
-# The time, in until the match starts if no more players enter the match. (Disabled in solo private lobbies)
+# The time until the match starts if no more players enter the match. (Disabled in solo private lobbies)
 AutoStartTime: 30
 
 # The match start timer, it is recommended to be at least 5 to allow the players to load the world.
