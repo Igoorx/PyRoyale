@@ -300,6 +300,8 @@ class MyServerFactory(WebSocketServerFactory):
         else:
             self.discordWebhook = None
 
+        self.randomWorldList = list()
+
         self.messages = 0
 
         reactor.callLater(5, self.generalUpdate)
@@ -350,6 +352,18 @@ class MyServerFactory(WebSocketServerFactory):
                 pass
             
         reactor.callLater(5, self.generalUpdate)
+
+    def getRandomWorld(self):
+        if len(self.worlds) == 0:
+            return None
+        
+        if len(self.randomWorldList) > 0:
+            selected = random.choice(self.randomWorldList)
+            self.randomWorldList.remove(selected)
+            return selected
+        
+        self.randomWorldList = list(self.worlds) # Make a copy
+        return self.getRandomWorld()
 
     # Maybe this should be in a util class?
     def leet2(self, word):

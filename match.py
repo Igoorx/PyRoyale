@@ -163,7 +163,7 @@ class Match(object):
         except:
             pass
         
-        self.world = self.forceLevel if self.forceLevel != "" else random.choice(self.server.worlds)
+        self.world = self.forceLevel if self.forceLevel != "" else self.server.getRandomWorld()
 
         if not self.private:
             reactor.callLater(3, self.broadLoadWorld)
