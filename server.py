@@ -19,9 +19,9 @@ reactor = install_reactor(verbose=False,
                           require_optimal_reactor=False)
 
 try:
-    from discord_webhook import DiscordWebHook, DiscordEmbed
+    from discord_webhook import DiscordWebhook
     DWH_IMPORT = True
-except:
+except Exception as e:
     print("Can't import discord_webhook, discord functioning will be disabled.")
     DWH_IMPORT = False
 

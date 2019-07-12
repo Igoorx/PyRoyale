@@ -3,6 +3,11 @@ import emoji
 from twisted.internet import reactor
 from buffer import Buffer
 
+try:
+    from discord_webhook import DiscordEmbed
+except Exception as e:
+    pass
+
 class Player(object):
     def __init__(self, client, name, team, match, skin):
         self.client = client
