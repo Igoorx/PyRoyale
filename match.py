@@ -117,6 +117,9 @@ class Match(object):
             playersData.append(player.getSimpleData())
         return playersData
 
+    def onPlayerEnter(self, player):
+        self.broadPlayerList()
+
     def onPlayerReady(self, player):
         if (not self.private or self.roomName != "") and not self.playing: # Ensure that the game starts even with fewer players
             try:
@@ -135,10 +138,6 @@ class Match(object):
                 player.sendBin(0x10, p.serializePlayerObject())
             if self.startTimer != 0 or self.closed:
                 player.setStartTimer(self.startTimer)
-        player.sendJSON({"packets": [
-            {"players": self.getPlayersData(),
-             "type": "g12"}
-        ], "type": "s01"}) # self.broadPlayerList() DISABLED 11/07/2019
 
         if not self.playing:
             if len(self.players) >= self.server.playerCap:

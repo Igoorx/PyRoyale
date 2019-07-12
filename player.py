@@ -71,7 +71,8 @@ class Player(object):
         
         if self.match.world == "lobby":
             self.lobbier = True
-            
+
+        self.match.onPlayerEnter(self)
         self.loadWorld(self.match.world, self.match.customLevelData)
 
     def onLoadComplete(self):
