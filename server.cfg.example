@@ -17,6 +17,9 @@ DefaultTeam:
 # Maximum of simultaneous connections per IP Address
 MaxSimulIP: 3
 
+# Discord Webhook Url for Discord functioning (see more: https://support.discordapp.com/hc/en-us/articles/228383668)
+DiscordWebhookUrl: 
+
 [Match]
 # Minimum of players to a match start by votes
 PlayerMin: 2

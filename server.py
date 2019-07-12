@@ -18,6 +18,13 @@ from autobahn.twisted import install_reactor
 reactor = install_reactor(verbose=False,
                           require_optimal_reactor=False)
 
+try:
+    from discord_webhook import DiscordWebHook, DiscordEmbed
+    DWH_IMPORT = True
+except:
+    print("Can't import discord_webhook, discord functioning will be disabled.")
+    DWH_IMPORT = False
+
 from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from twisted.internet.protocol import Factory
 import json
@@ -260,7 +267,7 @@ class MyServerFactory(WebSocketServerFactory):
                                    "server.cfg"), "r") as f:
                 self.configHash = hashlib.md5(f.read().encode('utf-8')).hexdigest()
             self.readConfig(self.configHash)
-        except:
+        except Exception as e:
             sys.stderr.write("The file \"server.cfg\" does not exist or is invalid, consider renaming \"server.cfg.example\" to \"server.cfg\".\n")
             if os.name == 'nt': # Enforce that the window opens in windows
                 print("Press ENTER to exit")
@@ -288,6 +295,11 @@ class MyServerFactory(WebSocketServerFactory):
         except:
             pass
 
+        if DWH_IMPORT:
+            self.discordWebhook = DiscordWebhook(url=self.discordWebhookUrl)
+        else:
+            self.discordWebhook = None
+
         self.messages = 0
 
         reactor.callLater(5, self.generalUpdate)
@@ -304,6 +316,7 @@ class MyServerFactory(WebSocketServerFactory):
         self.defaultName = config.get('Server', 'DefaultName').strip()
         self.defaultTeam = config.get('Server', 'DefaultTeam').strip()
         self.maxSimulIP = config.getint('Server', 'MaxSimulIP')
+        self.discordWebhookUrl = config.get('Server', 'DiscordWebhookUrl').strip()
         self.playerMin = config.getint('Match', 'PlayerMin')
         self.playerCap = config.getint('Match', 'PlayerCap')
         self.autoStartTime = config.getint('Match', 'AutoStartTime')
@@ -338,7 +351,8 @@ class MyServerFactory(WebSocketServerFactory):
             
         reactor.callLater(5, self.generalUpdate)
 
-    def Leet2(word):
+    # Maybe this should be in a util class?
+    def leet2(self, word):
         REPLACE = { str(index): str(letter) for index, letter in enumerate('oizeasgtb') }
         letters = [ REPLACE.get(l, l) for l in word.lower() ]
         return ''.join(letters)
@@ -346,7 +360,7 @@ class MyServerFactory(WebSocketServerFactory):
     def checkCurse(self, str):
         if self.checkCheckCurse(str):
             return True
-        str = Leet2(str)
+        str = self.leet2(str)
         if self.checkCheckCurse(str):
             return True
         str = ''.join(e for e in str if e.isalnum())

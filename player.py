@@ -95,11 +95,7 @@ class Player(object):
             self.level = level
             self.zone = zone
             
-            wasDead = self.dead
             self.dead = False
-            if wasDead:
-                self.match.broadPlayerList()
-            
             self.client.stopDCTimer()
             
             self.match.broadBin(0x10, Buffer().writeInt16(self.id).write(pktData).writeInt16(self.skin))
@@ -158,8 +154,15 @@ class Player(object):
 
             self.win = True
             self.client.startDCTimer(120)
+
+            pos = self.match.getWinners()
+            if self.server.discordWebhook is not None and pos == 1 and not self.match.private:
+                embed = DiscordEmbed(description='**%s** has achieved **#1** victory royale!' % self.name, color=0xffff00)
+                self.server.discordWebhook.add_embed(embed)
+                self.server.discordWebhook.execute()
+                self.server.discordWebhook.remove_embed(0)
             
-            self.match.broadBin(0x18, Buffer().writeInt16(self.id).writeInt8(self.match.getWinners()).writeInt8(0))
+            self.match.broadBin(0x18, Buffer().writeInt16(self.id).writeInt8(pos).writeInt8(0))
             
         elif code == 0x19:
             self.trustCount += 1
