@@ -118,7 +118,7 @@ class Match(object):
         return playersData
 
     def onPlayerEnter(self, player):
-        self.broadPlayerList()
+        pass
 
     def onPlayerReady(self, player):
         if (not self.private or self.roomName != "") and not self.playing: # Ensure that the game starts even with fewer players
@@ -138,6 +138,7 @@ class Match(object):
                 player.sendBin(0x10, p.serializePlayerObject())
             if self.startTimer != 0 or self.closed:
                 player.setStartTimer(self.startTimer)
+        self.broadPlayerList()
 
         if not self.playing:
             if len(self.players) >= self.server.playerCap:
