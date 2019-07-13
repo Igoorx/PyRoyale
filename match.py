@@ -117,16 +117,25 @@ class Match(object):
             playersData.append(player.getSimpleData())
         return playersData
 
+    def broadPlayerUpdate(self, player, pktData):
+        data = Buffer().writeInt16(player.id).write(pktData).toBytes()
+        for p in self.players:
+            if not p.loaded or p.id == player.id or p.level != player.level or p.zone != player.zone:
+                continue
+            p.sendBin(0x12, data)
+
     def onPlayerEnter(self, player):
         pass
 
     def onPlayerReady(self, player):
         if (not self.private or self.roomName != "") and not self.playing: # Ensure that the game starts even with fewer players
-            try:
-                self.autoStartTimer.cancel()
-            except:
-                pass
-            self.autoStartTimer = reactor.callLater(self.server.autoStartTime, self.start, True)
+            if self.autoStartTimer is not None:
+                try:
+                    self.autoStartTimer.reset(self.server.autoStartTime)
+                except:
+                    pass
+            else:
+                self.autoStartTimer = reactor.callLater(self.server.autoStartTime, self.start, True)
 
         if self.world == "lobby" and self.goldFlowerTaken:
             self.broadBin(0x20, Buffer().writeInt16(-1).writeInt8(0).writeInt8(0).writeInt32(458761).writeInt8(0))
@@ -147,6 +156,18 @@ class Match(object):
             # when someone enters the game, it can make it possible to start the game.
             elif self.server.enableVoteStart and self.votes >= len(self.players) * self.server.voteRateToStart:
                 self.start()
+
+    def onPlayerWarp(self, player, level, zone):
+        for p in self.players:
+            if not p.loaded or p.id == player.id:
+                continue
+            # Tell fellows that the player warped
+            if p.level == player.level and p.zone == player.zone:
+                p.sendBin(0x12, Buffer().writeInt16(player.id).writeInt8(level).writeInt8(zone).write(player.lastUpdatePkt[2:]))
+                continue
+            elif p.level != level or p.zone != zone:
+                continue
+            player.sendBin(0x12, Buffer().writeInt16(p.id).write(p.lastUpdatePkt))
 
     def voteStart(self):
         self.votes += 1

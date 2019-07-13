@@ -50,10 +50,11 @@ class MyServerProtocol(WebSocketServerProtocol):
         self.blocked = bool()
 
         self.dcTimer = None
+        self.maxConLifeTimer = None
 
     def startDCTimer(self, time):
         self.stopDCTimer()
-        self.dcTimer = reactor.callLater(time, self.transport.loseConnection)
+        self.dcTimer = reactor.callLater(time, self.sendClose)
 
     def stopDCTimer(self):
         try:
@@ -72,13 +73,20 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         if not self.address:
             self.address = self.transport.getPeer().host
+
+        # A connection can only be alive for 30 minutes
+        self.maxConLifeTimer = reactor.callLater(30 * 60, self.sendClose)
  
         self.startDCTimer(25)
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
         #print("WebSocket connection closed: {0}".format(reason))
-        
+
+        try:
+            self.maxConLifeTimer.cancel()
+        except:
+            pass
         self.stopDCTimer()
 
         if self.stat == "g" and self.player != None:
@@ -93,7 +101,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         if len(payload) == 0:
             return
 
-        self.server.messages += 1
+        self.server.in_messages += 1
 
         try:
             if isBinary:
@@ -105,15 +113,17 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.onTextMessage(payload.decode('utf8'))
         except Exception as e:
             traceback.print_exc()
-            self.transport.loseConnection()
+            self.sendClose()
             self.recv.clear()
             return
 
     def sendJSON(self, j):
+        self.server.out_messages += 1
         #print("sendJSON: "+str(j))
         self.sendMessage(json.dumps(j).encode('utf-8'), False)
 
     def sendBin(self, code, buff):
+        self.server.out_messages += 1
         msg=Buffer().writeInt8(code).write(buff.toBytes() if isinstance(buff, Buffer) else buff).toBytes()
         #print("sendBin: "+str(code)+" "+str(msg))
         self.sendMessage(msg, True)
@@ -151,7 +161,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         if self.stat == "l":
             if type == "l00": # Input state ready
                 if self.pendingStat is None:
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
                 self.pendingStat = None
                 
@@ -159,7 +169,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 
                 if self.address != "127.0.0.1" and self.server.getPlayerCountByAddress(self.address) >= self.server.maxSimulIP:
                     self.exception("Too many connections")
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
 
                 for b in self.server.blocked:
@@ -190,8 +200,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                     if self.blocked:
                         self.sendJSON({"packets": [{"game": "jail", "type": "g01"}], "type": "s01"})
                         return
-                    
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
                 self.pendingStat = None
                 
@@ -203,8 +212,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                         self.sendBin(0x02, Buffer().writeInt16(0).writeInt16(0))
                         self.startDCTimer(15)
                         return
-                    
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
                 self.player.onLoadComplete()
 
@@ -302,7 +310,8 @@ class MyServerFactory(WebSocketServerFactory):
 
         self.randomWorldList = list()
 
-        self.messages = 0
+        self.in_messages = 0
+        self.out_messages = 0
 
         reactor.callLater(5, self.generalUpdate)
 
@@ -331,8 +340,9 @@ class MyServerFactory(WebSocketServerFactory):
     def generalUpdate(self):
         playerCount = len(self.players)
 
-        print("pc: {0}, mc: {1}, mp5s: {2}".format(playerCount, len(self.matches), self.messages))
-        self.messages = 0
+        print("pc: {0}, mc: {1}, in: {2}, out: {3}".format(playerCount, len(self.matches), self.in_messages, self.out_messages))
+        self.in_messages = 0
+        self.out_messages = 0
 
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),

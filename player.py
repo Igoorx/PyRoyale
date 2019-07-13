@@ -31,6 +31,7 @@ class Player(object):
         self.voted = bool()
         self.loaded = bool()
         self.lobbier = bool()
+        self.lastUpdatePkt = None
 
         self.trustCount = int()
         self.lastX = int()
@@ -116,20 +117,25 @@ class Player(object):
             self.match.broadBin(0x11, Buffer().writeInt16(self.id))
             
         elif code == 0x12: # UPDATE_PLAYER_OBJECT
-            if self.dead:
+            if self.dead or self.lastUpdatePkt == pktData:
                 return
 
             level, zone, pos, sprite, reverse = b.readInt8(), b.readInt8(), b.readVec2(), b.readInt8(), b.readBool()
+
+            if self.level != level or self.zone != zone:
+                self.match.onPlayerWarp(self, level, zone)
+                
             self.level = level
             self.zone = zone
             self.posX = pos[0]
             self.posY = pos[1]
+            self.lastUpdatePkt = pktData
 
             if sprite > 5 and self.match.world == "lobby" and zone == 0:
                 self.client.block(0x1)
                 return
             
-            self.match.broadBin(0x12, Buffer().writeInt16(self.id).write(pktData))
+            self.match.broadPlayerUpdate(self, pktData)
             
         elif code == 0x13: # PLAYER_OBJECT_EVENT
             if self.dead:
