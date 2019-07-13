@@ -1,7 +1,7 @@
 import os
 import sys
 
-NUM_SKINS = 5   #temporary until shop is implemented
+NUM_SKINS = 6   #temporary until shop is implemented
 
 if sys.version_info.major != 3:
     sys.stderr.write("You need python 3.7 or later to run this script\n")
