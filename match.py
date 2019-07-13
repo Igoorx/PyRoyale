@@ -159,7 +159,7 @@ class Match(object):
 
     def onPlayerWarp(self, player, level, zone):
         for p in self.players:
-            if not p.loaded or p.id == player.id:
+            if not p.loaded or p.lastUpdatePkr is None or p.id == player.id:
                 continue
             # Tell fellows that the player warped
             if p.level == player.level and p.zone == player.zone:
