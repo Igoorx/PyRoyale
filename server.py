@@ -365,6 +365,14 @@ class MyServerFactory(WebSocketServerFactory):
                     print("Configuration reloaded.")
         except:
             print("Failed to reload configuration.")
+
+        # Just to keep self.blocked synchronized with blocked.json
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "blocked.json"), "r") as f:
+                self.blocked = json.loads(f.read())
+        except:
+            pass
         
         if self.statusPath:
             try:
