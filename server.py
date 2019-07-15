@@ -329,15 +329,15 @@ class MyServerFactory(WebSocketServerFactory):
         self.maxSimulIP = config.getint('Server', 'MaxSimulIP')
         self.discordWebhookUrl = config.get('Server', 'DiscordWebhookUrl').strip()
         self.playerMin = config.getint('Match', 'PlayerMin')
-        newCap = config.getint('Match', 'PlayerCap')
-        if newCap < self.playerCap:
+        oldCap = self.playerCap
+        self.playerCap = config.getint('Match', 'PlayerCap')
+        if self.playerCap < oldCap:
             try:
                 for match in self.matches:
-                    if len(match.players) >= newCap:
+                    if len(match.players) >= self.playerCap:
                         match.start()
             except:
                 print("Couldn't start matches after player cap change...")
-        self.playerCap = newCap
         self.autoStartTime = config.getint('Match', 'AutoStartTime')
         self.startTimer = config.getint('Match', 'StartTimer')
         self.enableVoteStart = config.getboolean('Match', 'EnableVoteStart')
