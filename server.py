@@ -1,7 +1,7 @@
 import os
 import sys
 
-NUM_SKINS = 6   #temporary until shop is implemented
+NUM_SKINS = 22   #temporary until shop is implemented
 
 if sys.version_info.major != 3:
     sys.stderr.write("You need python 3.7 or later to run this script\n")
@@ -74,8 +74,8 @@ class MyServerProtocol(WebSocketServerProtocol):
         if not self.address:
             self.address = self.transport.getPeer().host
 
-        # A connection can only be alive for 30 minutes
-        self.maxConLifeTimer = reactor.callLater(30 * 60, self.sendClose)
+        # A connection can only be alive for 20 minutes
+        self.maxConLifeTimer = reactor.callLater(20 * 60, self.sendClose)
  
         self.startDCTimer(25)
         self.setState("l")
@@ -261,7 +261,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         b = Buffer(self.recv[1:pktLen])
         del self.recv[:pktLen]
         
-        if not self.player.loaded or self.blocked or (not self.player.match.closed and self.player.match.playing):
+        if self.player is None or not self.player.loaded or self.blocked or (not self.player.match.closed and self.player.match.playing):
             self.recv.clear()
             return False
         
@@ -329,7 +329,15 @@ class MyServerFactory(WebSocketServerFactory):
         self.maxSimulIP = config.getint('Server', 'MaxSimulIP')
         self.discordWebhookUrl = config.get('Server', 'DiscordWebhookUrl').strip()
         self.playerMin = config.getint('Match', 'PlayerMin')
-        self.playerCap = config.getint('Match', 'PlayerCap')
+        newCap = config.getint('Match', 'PlayerCap')
+        if newCap < self.playerCap:
+            try:
+                for match in self.matches:
+                    if len(match.players) >= newCap:
+                        match.start()
+            except:
+                print("Couldn't start matches after player cap change...")
+        self.playerCap = newCap
         self.autoStartTime = config.getint('Match', 'AutoStartTime')
         self.startTimer = config.getint('Match', 'StartTimer')
         self.enableVoteStart = config.getboolean('Match', 'EnableVoteStart')

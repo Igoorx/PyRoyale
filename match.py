@@ -120,7 +120,9 @@ class Match(object):
     def broadPlayerUpdate(self, player, pktData):
         data = Buffer().writeInt16(player.id).write(pktData).toBytes()
         for p in self.players:
-            if not p.loaded or p.id == player.id or p.level != player.level or p.zone != player.zone:
+            if not p.loaded or p.id == player.id:
+                continue
+            if not p.win and (p.level != player.level or p.zone != player.zone):
                 continue
             p.sendBin(0x12, data)
 

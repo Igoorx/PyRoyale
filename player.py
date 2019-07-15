@@ -108,7 +108,7 @@ class Player(object):
             self.match.broadBin(0x10, Buffer().writeInt16(self.id).write(pktData).writeInt16(self.skin))
 
         elif code == 0x11: # KILL_PLAYER_OBJECT
-            if self.dead:
+            if self.dead or self.win:
                 return
             
             self.dead = True
@@ -138,7 +138,7 @@ class Player(object):
             self.match.broadPlayerUpdate(self, pktData)
             
         elif code == 0x13: # PLAYER_OBJECT_EVENT
-            if self.dead:
+            if self.dead or self.win:
                 return
 
             type = b.readInt8()
@@ -168,15 +168,22 @@ class Player(object):
             self.client.startDCTimer(120)
 
             pos = self.match.getWinners()
-            if self.server.discordWebhook is not None and pos == 1 and not self.match.private:
-                name = self.name
-                # We already filter players that have a squad so...
-                if len(self.team) == 0 and self.server.checkCurse(self.name):
-                    name = "[ censored ]"
-                embed = DiscordEmbed(description='**%s** has achieved **#1** victory royale!' % name, color=0xffff00)
-                self.server.discordWebhook.add_embed(embed)
-                self.server.discordWebhook.execute()
-                self.server.discordWebhook.remove_embed(0)
+            try:
+                # Maybe this should be assynchronous?
+                if self.server.discordWebhook is not None and pos == 1 and not self.match.private:
+                    name = self.name
+                    # We already filter players that have a squad so...
+                    if len(self.team) == 0 and self.server.checkCurse(self.name):
+                        name = "[ censored ]"
+                    embed = DiscordEmbed(description='**%s** has achieved **#1** victory royale!' % name, color=0xffff00)
+                    self.server.discordWebhook.add_embed(embed)
+                    self.server.discordWebhook.execute()
+                    self.server.discordWebhook.remove_embed(0)
+            except:
+                pass
+
+            # Make sure that everyone knows that the player is at the axe
+            self.match.broadPlayerUpdate(self, self.lastUpdatePkt)
             
             self.match.broadBin(0x18, Buffer().writeInt16(self.id).writeInt8(pos).writeInt8(0))
             
