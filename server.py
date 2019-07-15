@@ -330,7 +330,10 @@ class MyServerFactory(WebSocketServerFactory):
         self.maxSimulIP = config.getint('Server', 'MaxSimulIP')
         self.discordWebhookUrl = config.get('Server', 'DiscordWebhookUrl').strip()
         self.playerMin = config.getint('Match', 'PlayerMin')
-        oldCap = self.playerCap
+        try:
+            oldCap = self.playerCap
+        except:
+            oldCap = 0
         self.playerCap = config.getint('Match', 'PlayerCap')
         if self.playerCap < oldCap:
             try:
