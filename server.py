@@ -277,6 +277,7 @@ class MyServerFactory(WebSocketServerFactory):
             self.readConfig(self.configHash)
         except Exception as e:
             sys.stderr.write("The file \"server.cfg\" does not exist or is invalid, consider renaming \"server.cfg.example\" to \"server.cfg\".\n")
+            print("ERROR:", e)
             if os.name == 'nt': # Enforce that the window opens in windows
                 print("Press ENTER to exit")
                 input()
