@@ -1,8 +1,6 @@
 import os
 import sys
 
-NUM_SKINS = 22   #temporary until shop is implemented
-
 if sys.version_info.major != 3:
     sys.stderr.write("You need python 3.7 or later to run this script\n")
     if os.name == 'nt': # Enforce that the window opens in windows
@@ -35,6 +33,8 @@ import configparser
 from buffer import Buffer
 from player import Player
 from match import Match
+
+NUM_SKINS = 22   #temporary until shop is implemented
 
 class MyServerProtocol(WebSocketServerProtocol):
     def __init__(self, server):
@@ -181,14 +181,12 @@ class MyServerProtocol(WebSocketServerProtocol):
                 team = packet["team"][:3].strip().upper()
                 if len(team) == 0:
                     team = self.server.defaultTeam
-                skin = packet["skin"] if "skin" in packet else 0
-                if skin<0 or skin>NUM_SKINS-1:  #once shop is implemented this check should be "does player own this skin"
-                    skin = 0
+                skin = int(packet["skin"] if "skin" in packet else 0)
                 self.player = Player(self,
                                      packet["name"],
                                      team,
                                      self.server.getMatch(team, packet["private"] if "private" in packet else False),
-                                     skin)
+                                     skin if skin in range(NUM_SKINS) else 0)
                 self.loginSuccess()
                 self.server.players.append(self.player)
                 
@@ -407,6 +405,7 @@ class MyServerFactory(WebSocketServerFactory):
         str = self.leet2(str)
         if self.checkCheckCurse(str):
             return True
+        str = str.replace("|", "i").replace("$", "s").replace("@", "a").replace("&", "e")
         str = ''.join(e for e in str if e.isalnum())
         if self.checkCheckCurse(str):
             return True
