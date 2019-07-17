@@ -24,18 +24,28 @@ except Exception as e:
     print("Can't import discord_webhook, discord functioning will be disabled.")
     DWH_IMPORT = False
 
+try:
+    from captcha.image import ImageCaptcha
+    CP_IMPORT = True
+except:
+    print("Can't import captcha, captcha functioning will be disabled.")
+    CP_IMPORT = False
+
 from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from twisted.internet.protocol import Factory
 import json
+import string
 import random
+import base64
 import hashlib
 import traceback
 import configparser
+from io import BytesIO
 from buffer import Buffer
 from player import Player
 from match import Match
 
-NUM_SKINS = 22   #temporary until shop is implemented
+NUM_SKINS = 33   #temporary until shop is implemented
 
 class MyServerProtocol(WebSocketServerProtocol):
     def __init__(self, server):
@@ -91,6 +101,12 @@ class MyServerProtocol(WebSocketServerProtocol):
         except:
             pass
         self.stopDCTimer()
+
+        if self.address in self.server.captchas:
+            del self.server.captchas[self.address]
+
+        if self.username != "" and self.username in self.server.authd:
+            self.server.authd.remove(self.username)
 
         if self.stat == "g" and self.player != None:
             self.server.players.remove(self.player)
@@ -163,11 +179,10 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         if self.stat == "l":
             if type == "l00": # Input state ready
-                if self.pendingStat is None:
+                if self.player is not None or self.pendingStat is None:
                     self.sendClose()
                     return
                 self.pendingStat = None
-                
                 self.stopDCTimer()
 
                 if self.address != "127.0.0.1" and self.server.getPlayerCountByAddress(self.address) >= self.server.maxSimulIP:
@@ -181,14 +196,14 @@ class MyServerProtocol(WebSocketServerProtocol):
                         self.setState("g") # Ingame
                         return
 
+                name = packet["name"]
                 team = packet["team"][:3].strip().upper()
-                if len(team) == 0:
-                    team = self.server.defaultTeam
-                skin = int(packet["skin"] if "skin" in packet else 0)
+                priv = packet["private"]
+                skin = int(packet["skin"]) if "skin" in packet else 0
                 self.player = Player(self,
-                                     packet["name"],
-                                     team,
-                                     self.server.getMatch(team, packet["private"] if "private" in packet else False),
+                                     name if self.username != "" else ("*"+name),
+                                     team if team != "" else self.server.defaultTeam,
+                                     self.server.getMatch(team, priv if "private" in packet else False),
                                      skin if skin in range(NUM_SKINS) else 0)
                 self.loginSuccess()
                 self.server.players.append(self.player)
@@ -196,39 +211,112 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.setState("g") # Ingame
 
             elif type == "llg": #login
+                if self.username != "" or self.player is not None or self.pendingStat is None:
+                    self.sendClose()
+                    return
                 self.stopDCTimer()
-                status, msg = datastore.login(packet["username"], packet["password"])
-                self.sendJSON({"type": "llg", "status": status, "msg": msg})
-                if (status):
-                    self.username = packet["username"]
+                
+                username = packet["username"].upper()
+                if self.address in self.server.loginBlocked:
+                    self.sendJSON({"type": "llg", "status": False, "msg": "max login tries reached.\ntry again in one minute."})
+                    return
+                elif username in self.server.authd:
+                    self.sendJSON({"type": "llg", "status": False, "msg": "account already in use"})
+                    return
+
+                status, msg = datastore.login(username, packet["password"])
+
+                if status:
+                    self.username = username
                     self.session = msg["session"]
+                    self.server.authd.append(self.username)
+                else:
+                    if self.address not in self.server.maxLoginTries:
+                        self.server.maxLoginTries[self.address] = 1
+                    else:
+                        self.server.maxLoginTries[self.address] += 1
+                        if self.server.maxLoginTries[self.address] >= 4:
+                            del self.server.maxLoginTries[self.address]
+                            self.server.loginBlocked.append(self.address)
+                            reactor.callLater(60, self.server.loginBlocked.remove, self.address)
+                self.sendJSON({"type": "llg", "status": status, "msg": msg})
 
             elif type == "llo": #logout
+                if self.username == "" or self.player is not None or self.pendingStat is None:
+                    self.sendClose()
+                    return
+                
                 datastore.logout(self.session)
                 self.sendJSON({"type": "llo"})
 
             elif type == "lrg": #register
+                if self.username != "" or self.address not in self.server.captchas or self.player is not None or self.pendingStat is None:
+                    self.sendClose()
+                    return
                 self.stopDCTimer()
-                if self.server.checkCurse(packet["username"]):
-                    status, msg = (False, "please choose a different username")
+                
+                username = packet["username"].upper()
+                if CP_IMPORT and len(packet["captcha"]) != 5:
+                    status, msg = False, "invalid captcha"
+                elif CP_IMPORT and packet["captcha"].upper() != self.server.captchas[self.address]:
+                    status, msg = False, "incorrect captcha"
+                elif self.server.checkCurse(username):
+                    status, msg = False, "please choose a different username"
                 else:
-                    status, msg = datastore.register(packet["username"], packet["password"])
-                self.sendJSON({"type": "lrg", "status": status, "msg": msg})
-                if (status):
-                    self.username = packet["username"]
+                    status, msg = datastore.register(username, packet["password"])
+
+                if status:
+                    del self.server.captchas[self.address]
+                    self.username = username
                     self.session = msg["session"]
+                    self.server.authd.append(self.username)
+                self.sendJSON({"type": "lrg", "status": status, "msg": msg})
+
+            elif type == "lrc": #request captcha
+                if self.username != "" or self.player is not None or self.pendingStat is None:
+                    self.sendClose()
+                    return
+                if not CP_IMPORT:
+                    self.server.captchas[self.address] = ""
+                    self.sendJSON({"type": "lrc", "data": ""})
+                    return
+                self.stopDCTimer()
+
+                cp = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(5))
+                self.server.captchas[self.address] = cp
+                
+                imageCaptcha = ImageCaptcha()
+                image = imageCaptcha.generate_image(cp)
+                
+                imgByteArr = BytesIO()
+                image.save(imgByteArr, format='PNG')
+                imgByteArr = imgByteArr.getvalue()
+                
+                self.sendJSON({"type": "lrc", "data": base64.b64encode(imgByteArr).decode("utf-8")})
+                
 
             elif type == "lrs": #resume session
+                if self.username != "" or self.player is not None or self.pendingStat is None:
+                    self.sendClose()
+                    return
                 self.stopDCTimer()
+                
                 status, msg = datastore.resumeSession(packet["session"])
-                self.sendJSON({"type": "lrs", "status": status, "msg": msg})
-                if (status):
+
+                if status:
+                    if msg["username"] in self.server.authd:
+                        self.sendJSON({"type": "lrs", "status": False, "msg": "account already in use"})
+                        return
                     self.username = msg["username"]
                     self.session = msg["session"]
+                    self.server.authd.append(self.username)
+                self.sendJSON({"type": "lrs", "status": status, "msg": msg})
 
             elif type == "lpr": #update profile
-                if self.username == "":
+                if self.username == "" or self.player is not None or self.pendingStat is None:
+                    self.sendClose()
                     return
+                
                 datastore.updateAccount(self.username, packet)
 
         elif self.stat == "g":
@@ -347,6 +435,11 @@ class MyServerFactory(WebSocketServerFactory):
             self.discordWebhook = None
 
         self.randomWorldList = list()
+
+        self.maxLoginTries = {}
+        self.loginBlocked = []
+        self.captchas = {}
+        self.authd = []
 
         self.in_messages = 0
         self.out_messages = 0

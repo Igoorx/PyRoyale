@@ -17,6 +17,9 @@ This project uses Python <b>3.7</b> and the following dependencies:
 - emoji
 - configparser
 - jsonschema
+- discord_webhook **(OPTIONAL)**
+- captcha **(OPTIONAL)**
+- argon2 **(OPTIONAL)**
 
 <b>If you are on Windows, the module <u>pypiwin32</u> may also be required.</b> 
 

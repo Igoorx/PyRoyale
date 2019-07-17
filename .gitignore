@@ -106,3 +106,4 @@ venv.bak/
 # local files
 blocked.json
 server.cfg
+server.dat
