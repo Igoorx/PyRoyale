@@ -1,5 +1,6 @@
 import os
 import sys
+import datastore
 
 if sys.version_info.major != 3:
     sys.stderr.write("You need python 3.7 or later to run this script\n")
@@ -46,6 +47,8 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         self.pendingStat = None
         self.stat = str()
+        self.username = str();
+        self.session = str();
         self.player = None
         self.blocked = bool()
 
@@ -130,7 +133,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 
     def loginSuccess(self):
         self.sendJSON({"packets": [
-            {"name": self.player.name, "team": self.player.team, "sid": "i-dont-know-for-what-this-is-used", "type": "l01", "skin": self.player.skin}
+            {"name": self.player.name, "team": self.player.team, "type": "l01", "skin": self.player.skin}
         ], "type": "s01"})
     
     def setState(self, state):
@@ -191,6 +194,42 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.server.players.append(self.player)
                 
                 self.setState("g") # Ingame
+
+            elif type == "llg": #login
+                self.stopDCTimer()
+                status, msg = datastore.login(packet["username"], packet["password"])
+                self.sendJSON({"type": "llg", "status": status, "msg": msg})
+                if (status):
+                    self.username = packet["username"]
+                    self.session = msg["session"]
+
+            elif type == "llo": #logout
+                datastore.logout(self.session)
+                self.sendJSON({"type": "llo"})
+
+            elif type == "lrg": #register
+                self.stopDCTimer()
+                if self.server.checkCurse(packet["username"]):
+                    status, msg = (False, "please choose a different username")
+                else:
+                    status, msg = datastore.register(packet["username"], packet["password"])
+                self.sendJSON({"type": "lrg", "status": status, "msg": msg})
+                if (status):
+                    self.username = packet["username"]
+                    self.session = msg["session"]
+
+            elif type == "lrs": #resume session
+                self.stopDCTimer()
+                status, msg = datastore.resumeSession(packet["session"])
+                self.sendJSON({"type": "lrs", "status": status, "msg": msg})
+                if (status):
+                    self.username = msg["username"]
+                    self.session = msg["session"]
+
+            elif type == "lpr": #update profile
+                if self.username == "":
+                    return
+                datastore.updateAccount(self.username, packet)
 
         elif self.stat == "g":
             if type == "g00": # Ingame state ready
@@ -275,7 +314,7 @@ class MyServerFactory(WebSocketServerFactory):
             self.readConfig(self.configHash)
         except Exception as e:
             sys.stderr.write("The file \"server.cfg\" does not exist or is invalid, consider renaming \"server.cfg.example\" to \"server.cfg\".\n")
-            print("ERROR:", e)
+            sys.stderr.write(str(e)+"\n")
             if os.name == 'nt': # Enforce that the window opens in windows
                 print("Press ENTER to exit")
                 input()
