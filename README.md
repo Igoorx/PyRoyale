@@ -1,3 +1,5 @@
+# THIS REPOSITORY IS NOW BEING MAINTAINED AT [A NEW LOCATION, CLICK HERE.](https://github.com/mroyale/mroyale-server)
+
 # PyRoyale
 A open-source server emulator for Mario Royale browser game.
 
