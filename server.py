@@ -2,8 +2,6 @@ import os
 import sys
 import datastore
 
-NUM_SKINS = 5   #temporary until shop is implemented
-
 if sys.version_info.major != 3:
     sys.stderr.write("You need python 3.7 or later to run this script\n")
     if os.name == 'nt': # Enforce that the window opens in windows
@@ -37,6 +35,8 @@ from buffer import Buffer
 from player import Player
 from match import Match
 
+NUM_SKINS = 22   #temporary until shop is implemented
+
 class MyServerProtocol(WebSocketServerProtocol):
     def __init__(self, server):
         WebSocketServerProtocol.__init__(self)
@@ -47,16 +47,17 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         self.pendingStat = None
         self.stat = str()
+        self.username = str();
+        self.session = str();
         self.player = None
         self.blocked = bool()
 
         self.dcTimer = None
-        self.username = "";
-        self.session = "";
+        self.maxConLifeTimer = None
 
     def startDCTimer(self, time):
         self.stopDCTimer()
-        self.dcTimer = reactor.callLater(time, self.transport.loseConnection)
+        self.dcTimer = reactor.callLater(time, self.sendClose)
 
     def stopDCTimer(self):
         try:
@@ -75,13 +76,20 @@ class MyServerProtocol(WebSocketServerProtocol):
 
         if not self.address:
             self.address = self.transport.getPeer().host
+
+        # A connection can only be alive for 20 minutes
+        self.maxConLifeTimer = reactor.callLater(20 * 60, self.sendClose)
  
         self.startDCTimer(25)
         self.setState("l")
 
     def onClose(self, wasClean, code, reason):
         #print("WebSocket connection closed: {0}".format(reason))
-        
+
+        try:
+            self.maxConLifeTimer.cancel()
+        except:
+            pass
         self.stopDCTimer()
 
         if self.stat == "g" and self.player != None:
@@ -96,7 +104,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         if len(payload) == 0:
             return
 
-        self.server.messages += 1
+        self.server.in_messages += 1
 
         try:
             if isBinary:
@@ -108,15 +116,17 @@ class MyServerProtocol(WebSocketServerProtocol):
                 self.onTextMessage(payload.decode('utf8'))
         except Exception as e:
             traceback.print_exc()
-            self.transport.loseConnection()
+            self.sendClose()
             self.recv.clear()
             return
 
     def sendJSON(self, j):
+        self.server.out_messages += 1
         #print("sendJSON: "+str(j))
         self.sendMessage(json.dumps(j).encode('utf-8'), False)
 
     def sendBin(self, code, buff):
+        self.server.out_messages += 1
         msg=Buffer().writeInt8(code).write(buff.toBytes() if isinstance(buff, Buffer) else buff).toBytes()
         #print("sendBin: "+str(code)+" "+str(msg))
         self.sendMessage(msg, True)
@@ -154,7 +164,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         if self.stat == "l":
             if type == "l00": # Input state ready
                 if self.pendingStat is None:
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
                 self.pendingStat = None
                 
@@ -162,7 +172,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 
                 if self.address != "127.0.0.1" and self.server.getPlayerCountByAddress(self.address) >= self.server.maxSimulIP:
                     self.exception("Too many connections")
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
 
                 for b in self.server.blocked:
@@ -174,14 +184,12 @@ class MyServerProtocol(WebSocketServerProtocol):
                 team = packet["team"][:3].strip().upper()
                 if len(team) == 0:
                     team = self.server.defaultTeam
-                skin = packet["skin"] if "skin" in packet else 0
-                if skin<0 or skin>NUM_SKINS-1:  #once shop is implemented this check should be "does player own this skin"
-                    skin = 0
+                skin = int(packet["skin"] if "skin" in packet else 0)
                 self.player = Player(self,
                                      packet["name"],
                                      team,
                                      self.server.getMatch(team, packet["private"] if "private" in packet else False),
-                                     skin)
+                                     skin if skin in range(NUM_SKINS) else 0)
                 self.loginSuccess()
                 self.server.players.append(self.player)
                 
@@ -229,8 +237,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                     if self.blocked:
                         self.sendJSON({"packets": [{"game": "jail", "type": "g01"}], "type": "s01"})
                         return
-                    
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
                 self.pendingStat = None
                 
@@ -242,8 +249,7 @@ class MyServerProtocol(WebSocketServerProtocol):
                         self.sendBin(0x02, Buffer().writeInt16(0).writeInt16(0))
                         self.startDCTimer(15)
                         return
-                    
-                    self.transport.loseConnection()
+                    self.sendClose()
                     return
                 self.player.onLoadComplete()
 
@@ -292,7 +298,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         b = Buffer(self.recv[1:pktLen])
         del self.recv[:pktLen]
         
-        if not self.player.loaded or self.blocked or (not self.player.match.closed and self.player.match.playing):
+        if self.player is None or not self.player.loaded or self.blocked or (not self.player.match.closed and self.player.match.playing):
             self.recv.clear()
             return False
         
@@ -340,7 +346,10 @@ class MyServerFactory(WebSocketServerFactory):
         else:
             self.discordWebhook = None
 
-        self.messages = 0
+        self.randomWorldList = list()
+
+        self.in_messages = 0
+        self.out_messages = 0
 
         reactor.callLater(5, self.generalUpdate)
 
@@ -358,7 +367,18 @@ class MyServerFactory(WebSocketServerFactory):
         self.maxSimulIP = config.getint('Server', 'MaxSimulIP')
         self.discordWebhookUrl = config.get('Server', 'DiscordWebhookUrl').strip()
         self.playerMin = config.getint('Match', 'PlayerMin')
+        try:
+            oldCap = self.playerCap
+        except:
+            oldCap = 0
         self.playerCap = config.getint('Match', 'PlayerCap')
+        if self.playerCap < oldCap:
+            try:
+                for match in self.matches:
+                    if len(match.players) >= self.playerCap:
+                        match.start()
+            except:
+                print("Couldn't start matches after player cap change...")
         self.autoStartTime = config.getint('Match', 'AutoStartTime')
         self.startTimer = config.getint('Match', 'StartTimer')
         self.enableVoteStart = config.getboolean('Match', 'EnableVoteStart')
@@ -369,8 +389,9 @@ class MyServerFactory(WebSocketServerFactory):
     def generalUpdate(self):
         playerCount = len(self.players)
 
-        print("pc: {0}, mc: {1}, mp5s: {2}".format(playerCount, len(self.matches), self.messages))
-        self.messages = 0
+        print("pc: {0}, mc: {1}, in: {2}, out: {3}".format(playerCount, len(self.matches), self.in_messages, self.out_messages))
+        self.in_messages = 0
+        self.out_messages = 0
 
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -381,6 +402,14 @@ class MyServerFactory(WebSocketServerFactory):
                     print("Configuration reloaded.")
         except:
             print("Failed to reload configuration.")
+
+        # Just to keep self.blocked synchronized with blocked.json
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "blocked.json"), "r") as f:
+                self.blocked = json.loads(f.read())
+        except:
+            pass
         
         if self.statusPath:
             try:
@@ -390,6 +419,18 @@ class MyServerFactory(WebSocketServerFactory):
                 pass
             
         reactor.callLater(5, self.generalUpdate)
+
+    def getRandomWorld(self):
+        if len(self.worlds) == 0:
+            return None
+        
+        if len(self.randomWorldList) > 0:
+            selected = random.choice(self.randomWorldList)
+            self.randomWorldList.remove(selected)
+            return selected
+        
+        self.randomWorldList = list(self.worlds) # Make a copy
+        return self.getRandomWorld()
 
     # Maybe this should be in a util class?
     def leet2(self, word):
@@ -403,6 +444,7 @@ class MyServerFactory(WebSocketServerFactory):
         str = self.leet2(str)
         if self.checkCheckCurse(str):
             return True
+        str = str.replace("|", "i").replace("$", "s").replace("@", "a").replace("&", "e")
         str = ''.join(e for e in str if e.isalnum())
         if self.checkCheckCurse(str):
             return True
